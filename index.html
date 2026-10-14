@@ -2,9 +2,16 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="theme-color" content="#090A0F" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
   <title>Pick Ur Date | SNU Prom</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>if (window.tailwind) { tailwind.config = { future: { hoverOnlyWhenSupported: true } }; }</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,88 +21,201 @@
       --tinder-pink: #FD267A;
       --tinder-orange: #FF6036;
       --tinder-grad: linear-gradient(45deg, #FD267A 0%, #FF6036 100%);
+      --sat: env(safe-area-inset-top, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+    }
+    html {
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      color-scheme: dark;
+      background: #090A0F;
+      overscroll-behavior: none;
     }
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
       user-select: none;
+      -webkit-touch-callout: none;
     }
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       background-color: #090A0F;
       color: #FFFFFF;
       margin: 0;
-      padding: 0;
-      overflow: hidden;
+      /* Locked to the *visible* viewport (JS keeps --app-h in sync with keyboard / toolbars) */
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      width: 100%;
+      height: 100vh;
       height: 100dvh;
-      width: 100vw;
+      height: var(--app-h, 100dvh);
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+      padding: var(--sat) var(--sar) var(--sab) var(--sal);
     }
-    .tinder-gradient {
-      background: var(--tinder-grad);
-    }
+    img { -webkit-user-drag: none; user-drag: none; }
+    button { touch-action: manipulation; cursor: pointer; font-family: inherit; }
+    button:disabled { cursor: not-allowed; }
+    :focus-visible { outline: 2px solid #FD267A; outline-offset: 2px; }
+    input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+
+    .tinder-gradient { background: var(--tinder-grad); }
     .tinder-text-gradient {
       background: var(--tinder-grad);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    /* Apple Liquid Glass UI */
+    /* Apple Liquid Glass UI (with solid fallback when blur is unsupported) */
     .apple-glass {
-      background: rgba(24, 26, 34, 0.72);
-      backdrop-filter: blur(28px) saturate(190%);
-      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      background: rgba(24, 26, 34, 0.9);
       border: 1px solid rgba(255, 255, 255, 0.11);
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.16);
     }
     .apple-glass-pill {
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.14);
     }
-    .card-shadow {
-      box-shadow: 0 22px 48px -12px rgba(0, 0, 0, 0.85);
+    @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+      .apple-glass {
+        background: rgba(24, 26, 34, 0.72);
+        -webkit-backdrop-filter: blur(28px) saturate(190%);
+        backdrop-filter: blur(28px) saturate(190%);
+      }
+      .apple-glass-pill {
+        background: rgba(255, 255, 255, 0.08);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+      }
     }
+    .card-shadow { box-shadow: 0 22px 48px -12px rgba(0, 0, 0, 0.85); }
+
+    /* ---- Swipe cards ---- */
+    #cardStage { min-height: 0; }
+    #cardsMount { position: absolute; inset: 0; }
     .swipe-card {
       position: absolute;
       inset: 0;
       border-radius: 20px;
       overflow: hidden;
-      touch-action: none;
+      touch-action: none;                 /* lets Pointer Events own the gesture on touch */
+      -webkit-user-select: none;
+      user-select: none;
       will-change: transform;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transform: translate3d(0, 0, 0);
       transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.15), opacity 0.25s ease;
+      cursor: grab;
     }
+    .swipe-card:active { cursor: grabbing; }
     .stamp-like {
-      border: 4px solid #00E676;
-      color: #00E676;
+      border: 4px solid #00E676; color: #00E676;
       transform: rotate(-16deg);
       text-shadow: 0 2px 10px rgba(0, 230, 118, 0.35);
     }
     .stamp-nope {
-      border: 4px solid #FF1744;
-      color: #FF1744;
+      border: 4px solid #FF1744; color: #FF1744;
       transform: rotate(16deg);
       text-shadow: 0 2px 10px rgba(255, 23, 68, 0.35);
     }
     .stamp-super {
-      border: 4px solid #00B0FF;
-      color: #00B0FF;
+      border: 4px solid #00B0FF; color: #00B0FF;
       transform: rotate(-6deg);
       text-shadow: 0 2px 10px rgba(0, 176, 255, 0.35);
     }
+
+    /* ---- Forms: no iOS zoom, no native chrome ---- */
     input, textarea, select {
+      -webkit-user-select: text !important;
       user-select: text !important;
+      -webkit-appearance: none;
+      appearance: none;
+      border-radius: 0.75rem;
+      font-family: inherit;
     }
-    ::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
+    input[type="text"], input[type="email"], input[type="password"], input[type="tel"], input[type="number"], textarea { border-radius: 0.75rem; }
+    #chatInput { border-radius: 9999px; }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ffffff99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.9rem center;
+      padding-right: 2.25rem !important;
     }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.18);
-      border-radius: 999px;
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    @media (pointer: coarse) {
+      input, textarea, select { font-size: 16px !important; }  /* prevents iOS focus-zoom */
+    }
+    input:-webkit-autofill {
+      -webkit-text-fill-color: #fff;
+      -webkit-box-shadow: 0 0 0 1000px #181A24 inset;
+      caret-color: #fff;
+    }
+
+    /* ---- Scrolling ---- */
+    .overflow-y-auto { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 999px; }
+    * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+
+    /* ---- Layout fixes ---- */
+    .w-15 { width: 3.75rem; } .h-15 { height: 3.75rem; }
+    #authView { overflow-x: hidden; }
+    #authView > .blur-3xl { position: fixed; }          /* glows no longer create scroll overflow */
+    #toastBanner {
+      bottom: calc(1.5rem + var(--sab));
+      max-width: calc(100% - 2rem);
+      width: max-content;
+      text-align: center;
+      line-height: 1.35;
+    }
+    #matchCelebrationModal, #reportModal { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    #matchCelebrationModal { justify-content: safe center; padding-top: calc(1.5rem + var(--sat)); padding-bottom: calc(1.5rem + var(--sab)); }
+    #coupleChatView form { padding-bottom: calc(0.75rem + 0px); }
+    #actionButtonsRow button { flex-shrink: 0; }
+
+    /* Demo bar: never wraps awkwardly on phones */
+    #sandboxBar { gap: 0.5rem; }
+    #sandboxBar > div { min-width: 0; }
+    #sandboxBar > div:first-child { flex: 1 1 auto; overflow: hidden; }
+    #sandboxBar > div:last-child { flex: 0 0 auto; }
+    #sandboxBar button { white-space: nowrap; }
+    #gateBadgeText { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    @media (max-width: 520px) {
+      #sandboxBar > div:first-child > span.text-white\/70 { display: none; }
+      #sandboxBar button { font-size: 11px; padding-left: 0.6rem; padding-right: 0.6rem; }
+    }
+
+    /* Small phones */
+    @media (max-width: 380px) {
+      #actionButtonsRow { gap: 0.6rem; }
+    }
+    /* Landscape phones / short windows: tighten everything so nothing is cut off */
+    @media (max-height: 560px) {
+      #sandboxBar { padding-top: 0.2rem; padding-bottom: 0.2rem; }
+      #appView header { height: 2.75rem; }
+      #swipeDeckWrapper { padding: 0.5rem 0.75rem; }
+      #actionButtonsRow { padding-top: 0.4rem; }
+      #actionButtonsRow button { transform: scale(0.88); }
+      #matchCelebrationModal img { width: 5rem; height: 5rem; }
+      #matchCelebrationModal h2 { font-size: 2rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
     }
   </style>
 </head>
-<body class="flex flex-col h-full w-full relative">
+<body class="flex flex-col">
 
   <!-- TOP DEMO / SANDBOX BAR (Remove or hide in production once 50 users join) -->
   <div id="sandboxBar" class="w-full bg-[#12131A] border-b border-white/10 px-3 py-1.5 flex items-center justify-between text-xs z-50">
@@ -115,12 +235,12 @@
   </div>
 
   <!-- 1. AUTHENTICATION VIEW (SIGN IN / CREATE ACCOUNT / FORGOT PASSWORD) -->
-  <section id="authView" class="flex-1 flex items-center justify-center p-4 relative overflow-y-auto">
+  <section id="authView" class="flex-1 flex p-4 relative overflow-y-auto">
     <!-- Ambient background glow -->
     <div class="absolute -top-28 -left-28 w-96 h-96 rounded-full bg-pink-600/20 blur-3xl pointer-events-none"></div>
     <div class="absolute -bottom-28 -right-28 w-96 h-96 rounded-full bg-orange-500/20 blur-3xl pointer-events-none"></div>
 
-    <div class="apple-glass w-full max-w-md rounded-3xl p-7 sm:p-8 relative z-10">
+    <div class="apple-glass w-full max-w-md rounded-3xl p-7 sm:p-8 relative z-10 m-auto">
       <!-- Brand Header -->
       <div class="flex flex-col items-center text-center mb-6">
         <div class="w-14 h-14 rounded-2xl tinder-gradient flex items-center justify-center shadow-lg shadow-pink-500/30 mb-3">
@@ -205,8 +325,8 @@
   </section>
 
   <!-- 2. ONBOARDING VIEW (FULL-BODY REAL PHOTO VALIDATION + BIO + HIDDEN PREFS) -->
-  <section id="onboardingView" class="hidden flex-1 flex items-center justify-center p-4 overflow-y-auto">
-    <div class="apple-glass w-full max-w-lg rounded-3xl p-6 sm:p-8 my-auto">
+  <section id="onboardingView" class="hidden flex-1 flex p-4 overflow-y-auto">
+    <div class="apple-glass w-full max-w-lg rounded-3xl p-6 sm:p-8 m-auto">
       <div class="flex items-center justify-between mb-5">
         <div>
           <span class="text-[11px] font-extrabold uppercase tracking-widest text-pink-400">Step <span id="onboardStepNum">1</span> of 3</span>
@@ -555,23 +675,26 @@
       <div id="coupleChatView" class="hidden absolute inset-0 bg-[#090A0F] z-30 flex flex-col">
         <!-- Chat Header -->
         <div class="px-4 py-3 bg-[#12141D] border-b border-white/10 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <img id="chatPartnerAvatar" src="" class="w-11 h-11 rounded-full object-cover border-2 border-pink-500" />
-            <div>
-              <div class="flex items-center gap-1.5">
-                <h3 id="chatPartnerName" class="font-extrabold text-sm"></h3>
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <button type="button" onclick="closeChatScreen()" title="Back to swiping" aria-label="Back to swiping" class="shrink-0 p-1.5 -ml-1.5 rounded-full text-white/70 hover:text-white">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <img id="chatPartnerAvatar" src="" class="shrink-0 w-11 h-11 rounded-full object-cover border-2 border-pink-500" />
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <h3 id="chatPartnerName" class="font-extrabold text-sm truncate"></h3>
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">Official Prom Match</span>
               </div>
-              <p id="chatPartnerMeta" class="text-[11px] text-white/55"></p>
+              <p id="chatPartnerMeta" class="text-[11px] text-white/55 truncate"></p>
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 shrink-0 ml-2">
             <!-- Silent Report Button inside Chat -->
-            <button onclick="openReportModal(state.matchedPartner)" class="px-3 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold transition" title="Report Fake or Abusive User">
+            <button onclick="openReportModal(state.matchedPartner)" class="whitespace-nowrap px-3 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold transition" title="Report Fake or Abusive User">
               🚩 Report
             </button>
-            <button onclick="unmatchPartner()" class="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/60 text-xs font-semibold transition">
+            <button onclick="unmatchPartner()" class="whitespace-nowrap px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/60 text-xs font-semibold transition">
               Unmatch
             </button>
           </div>
@@ -587,7 +710,7 @@
 
         <!-- Message Input Bar -->
         <form onsubmit="sendChatMessage(event)" class="p-3 bg-[#12141D] border-t border-white/10 flex items-center gap-2">
-          <input id="chatInput" type="text" required placeholder="Type a message to your Prom match..." class="flex-1 px-4 py-3 rounded-full bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          <input id="chatInput" type="text" required placeholder="Type a message to your Prom match..." class="flex-1 min-w-0 px-4 py-3 rounded-full bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
           <button type="submit" class="px-5 py-3 rounded-full tinder-gradient text-white font-extrabold text-xs uppercase tracking-wider shadow-lg">
             Send
           </button>
@@ -656,8 +779,7 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toastBanner" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full apple-glass text-xs font-extrabold text-white shadow-2xl border border-white/20"></div>
 
-  <script>
-    /********************************************************************
+<script>    /********************************************************************
      * 1. SUPABASE CONFIGURATION (PASTE YOUR KEYS HERE FOR PRODUCTION)
      ********************************************************************/
     const SUPABASE_CONFIG = {
@@ -871,7 +993,8 @@
       const password = document.getElementById("regPassword").value;
 
       // Enforce 1-account-per-device & unique Roll No / Phone in localStorage + Supabase
-      const usedRoll = localStorage.getItem("snu_locked_roll");
+      let usedRoll = null;
+      try { usedRoll = localStorage.getItem("snu_locked_roll"); } catch (_) {}
       if (usedRoll && usedRoll !== rollNo) {
         return showAuthAlert(`This device is already bound to SNU Roll No. ${usedRoll}. Multiple accounts are blocked.`, true);
       }
@@ -881,7 +1004,7 @@
         if (error) return showAuthAlert(error.message, true);
       }
 
-      localStorage.setItem("snu_locked_roll", rollNo);
+      try { localStorage.setItem("snu_locked_roll", rollNo); } catch (_) {}
       state.currentUser.email = email;
       state.currentUser.phone = phone;
       state.currentUser.rollNo = rollNo;
@@ -914,6 +1037,10 @@
       statusBox.textContent = "🔍 Verifying portrait ratio & real-person skin/silhouette...";
 
       const reader = new FileReader();
+      reader.onerror = function () {
+        statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-rose-500/15 border-rose-500/40 text-rose-200";
+        statusBox.textContent = "⚠️ Could not read that file. Please try another photo.";
+      };
       reader.onload = function (ev) {
         const img = new Image();
         img.onload = function () {
@@ -953,20 +1080,813 @@
           statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-emerald-500/15 border-emerald-500/40 text-emerald-200";
           statusBox.textContent = "✅ Full-body portrait photo verified!";
         };
+        img.onerror = function () {
+          statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-rose-500/15 border-rose-500/40 text-rose-200";
+          statusBox.textContent = "⚠️ Unsupported image. Use a JPG, PNG or WebP photo.";
+        };
         img.src = ev.target.result;
       };
       reader.readAsDataURL(file);
+      event.target.value = ""; // allow re-picking the same file
     }
+
+    /********************************************************************
+     * 7. SMALL HELPERS
+     ********************************************************************/
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+    ));
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const prefersReducedMotion = () =>
+      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Extra runtime state (kept separate from the original state shape)
+    state.seen = new Set();
+    state.busy = false;
+    state.joinedGender = null;
+    state.lastSwipedDir = null;
+    const GATE_BASE = { male: 18, female: 21 };
+    const STACK_SIZE = 3;
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const t = $("toastBanner");
+      t.textContent = msg;
+      t.classList.remove("hidden");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.add("hidden"), 2600);
+    }
+
+    /********************************************************************
+     * 8. VIEWPORT / ORIENTATION ENGINE (iOS, Android, Windows, macOS)
+     *    - Tracks the *visual* viewport so the on-screen keyboard, iOS
+     *      Safari toolbars and Android Chrome URL bar never hide the UI.
+     ********************************************************************/
+    function setAppHeight() {
+      const vv = window.visualViewport;
+      const h = Math.round(vv ? vv.height : window.innerHeight);
+      document.documentElement.style.setProperty("--app-h", h + "px");
+      if (vv && vv.offsetTop > 0) window.scrollTo(0, 0);
+    }
+    setAppHeight();
+    window.addEventListener("resize", setAppHeight, { passive: true });
+    window.addEventListener("orientationchange", () => {
+      setAppHeight();
+      setTimeout(setAppHeight, 120);
+      setTimeout(setAppHeight, 400);
+    });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", setAppHeight);
+      window.visualViewport.addEventListener("scroll", setAppHeight);
+    }
+    // Stop iOS pinch-zoom / double-tap zoom from breaking the layout
+    ["gesturestart", "gesturechange", "gestureend"].forEach((ev) =>
+      document.addEventListener(ev, (e) => e.preventDefault())
+    );
+    // Keep a focused input visible when the keyboard opens
+    document.addEventListener("focusin", (e) => {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) {
+        setTimeout(() => {
+          setAppHeight();
+          e.target.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+        }, 280);
+      }
+    });
+
+    // Input hints so phones show the right keyboard + password managers work
+    (function setInputHints() {
+      const hints = {
+        loginEmail: { autocomplete: "email", inputmode: "email", autocapitalize: "none", autocorrect: "off", spellcheck: "false" },
+        loginPassword: { autocomplete: "current-password", autocapitalize: "none" },
+        regEmail: { autocomplete: "email", inputmode: "email", autocapitalize: "none", autocorrect: "off", spellcheck: "false" },
+        regPhone: { autocomplete: "tel-national", inputmode: "numeric" },
+        regRoll: { autocomplete: "off", inputmode: "numeric" },
+        regPassword: { autocomplete: "new-password", autocapitalize: "none" },
+        forgotEmail: { autocomplete: "email", inputmode: "email", autocapitalize: "none", autocorrect: "off", spellcheck: "false" },
+        obName: { autocomplete: "given-name", autocapitalize: "words" },
+        obAge: { inputmode: "numeric" },
+        chatInput: { autocomplete: "off", enterkeyhint: "send", autocapitalize: "sentences" }
+      };
+      Object.keys(hints).forEach((id) => {
+        const el = $(id);
+        if (!el) return;
+        Object.keys(hints[id]).forEach((k) => el.setAttribute(k, hints[id][k]));
+      });
+    })();
+
+    /********************************************************************
+     * 9. ONBOARDING (STEPS, GENDER, PREFERENCE)
+     ********************************************************************/
+    const ONBOARD_TITLES = {
+      1: "Upload Full-Body Photo",
+      2: "Tell Us About You",
+      3: "Your Preferences"
+    };
+    const BTN_ON = "border border-pink-500 bg-pink-500/20 font-extrabold";
+    const BTN_OFF = "border border-white/15 bg-white/5 font-bold text-white/70";
+    let chosenGender = "M";
+    let chosenPref = "F";
 
     function nextOnboardStep(step) {
       if (step === 2 && !uploadedPhotos[0]) {
-        const statusBox = document.getElementById("photoCheckStatus");
+        const statusBox = $("photoCheckStatus");
         statusBox.classList.remove("hidden");
         statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-rose-500/15 border-rose-500/40 text-rose-200";
         statusBox.textContent = "⚠️ Please upload your primary full-body photo first.";
         return;
       }
+      if (step === 3) {
+        const name = $("obName").value.trim();
+        if (!name) {
+          showToast("Please enter your first name");
+          $("obName").focus();
+          return;
+        }
+      }
 
-      document.getElementById("onboardStep1").classList.add("hidden");
-      document.getElementById("onboardStep2").classList.add("hidden");
-      document.getElement
+      [1, 2, 3].forEach((n) => $("onboardStep" + n).classList.add("hidden"));
+      $("onboardStep" + step).classList.remove("hidden");
+      $("onboardStepNum").textContent = step;
+      $("onboardStepTitle").textContent = ONBOARD_TITLES[step];
+      $("onboardProgress").style.width = (step * 33.34) + "%";
+      $("onboardingView").scrollTo({ top: 0 });
+    }
+
+    function selectGender(g) {
+      chosenGender = g;
+      $("genderBtnM").className = "py-3.5 rounded-2xl text-sm " + (g === "M" ? BTN_ON : BTN_OFF);
+      $("genderBtnF").className = "py-3.5 rounded-2xl text-sm " + (g === "F" ? BTN_ON : BTN_OFF);
+    }
+
+    function selectPreference(p) {
+      chosenPref = p;
+      $("prefBtnF").className = "py-3 rounded-2xl text-xs " + (p === "F" ? BTN_ON : BTN_OFF);
+      $("prefBtnM").className = "py-3 rounded-2xl text-xs " + (p === "M" ? BTN_ON : BTN_OFF);
+      $("prefBtnBOTH").className = "py-3 rounded-2xl text-xs " + (p === "BOTH" ? BTN_ON : BTN_OFF);
+    }
+
+    function completeOnboarding() {
+      const name = $("obName").value.trim();
+      if (!name) {
+        nextOnboardStep(2);
+        showToast("Please enter your first name");
+        return;
+      }
+      const u = state.currentUser;
+      u.name = name;
+      u.age = clamp(parseInt($("obAge").value, 10) || 19, 17, 25);
+      u.height = $("obHeight").value;
+      u.study_year = $("obYear").value;
+      u.major = $("obMajor").value.trim() || "SNU Student";
+      u.bio = $("obBio").value.trim();
+      u.gender = chosenGender;
+      u.interested_in = chosenPref;
+      const photos = uploadedPhotos.filter(Boolean);
+      if (photos.length) u.photos = photos;
+
+      state.joinedGender = chosenGender;
+      recomputeGateCounts();
+      enterMainApp();
+    }
+
+    /********************************************************************
+     * 10. LAUNCH GATE (25 MEN + 25 WOMEN)
+     ********************************************************************/
+    function recomputeGateCounts() {
+      const g = state.gateCounts;
+      g.male = GATE_BASE.male + (state.joinedGender === "M" ? 1 : 0);
+      g.female = GATE_BASE.female + (state.joinedGender === "F" ? 1 : 0);
+      if (g.male >= 25 && g.female >= 25) g.isUnlocked = true;
+    }
+
+    function updateGateUI() {
+      const g = state.gateCounts;
+      const total = g.male + g.female;
+      $("gateTotalLabel").textContent = total + " / 50 Students";
+      $("gateTotalBar").style.width = Math.min(100, (total / 50) * 100) + "%";
+      $("gateFemaleCount").textContent = Math.min(g.female, 25) + " / 25";
+      $("gateFemaleBar").style.width = Math.min(100, (g.female / 25) * 100) + "%";
+      $("gateMaleCount").textContent = Math.min(g.male, 25) + " / 25";
+      $("gateMaleBar").style.width = Math.min(100, (g.male / 25) * 100) + "%";
+      $("gateBadgeText").textContent =
+        (g.isUnlocked ? "Launch Gate Open (" : "Launch Gate Active (") + total + "/50)";
+    }
+
+    function applyGateView() {
+      const open = state.gateCounts.isUnlocked;
+      $("launchGateOverlay").classList.toggle("hidden", open);
+      $("swipeDeckWrapper").classList.toggle("hidden", !open);
+      if (open) renderDeck();
+    }
+
+    function setGateUnlocked(unlocked) {
+      const g = state.gateCounts;
+      if (unlocked) {
+        g.male = Math.max(g.male, 25);
+        g.female = Math.max(g.female, 25);
+        g.isUnlocked = true;
+      } else {
+        g.isUnlocked = false;
+        g.male = GATE_BASE.male + (state.joinedGender === "M" ? 1 : 0);
+        g.female = GATE_BASE.female + (state.joinedGender === "F" ? 1 : 0);
+      }
+      updateGateUI();
+      applyGateView();
+    }
+
+    function toggleGateLock() {
+      setGateUnlocked(!state.gateCounts.isUnlocked);
+      showToast(state.gateCounts.isUnlocked ? "Gate unlocked: swiping is live 🔥" : "Gate locked until 25M / 25F join");
+    }
+
+    function unlockDemoPoolNow() {
+      setGateUnlocked(true);
+      showToast("Demo deck unlocked 🔥");
+    }
+
+    function enterInstantDemo() {
+      state.gateCounts.isUnlocked = true;
+      state.gateCounts.male = Math.max(state.gateCounts.male, 25);
+      state.gateCounts.female = Math.max(state.gateCounts.female, 25);
+      enterMainApp();
+    }
+
+    /********************************************************************
+     * 11. ENTER MAIN APP
+     ********************************************************************/
+    function enterMainApp() {
+      $("authView").classList.add("hidden");
+      $("onboardingView").classList.add("hidden");
+      $("appView").classList.remove("hidden");
+
+      const u = state.currentUser;
+      $("myAvatarImg").src = u.photos[0];
+      $("myProfileName").textContent = u.name + ", " + u.age;
+      $("myRollBadge").textContent = u.rollNo ? "Roll No. " + u.rollNo : "Verified Campus ID";
+
+      buildDeck();
+      updateGateUI();
+      updateSentUI();
+      updateMatchPanel();
+      applyGateView();
+      setAppHeight();
+    }
+
+    /********************************************************************
+     * 12. DECK BUILDING + CARD RENDERING
+     ********************************************************************/
+    function buildDeck() {
+      if (state.isMatched) { state.deck = []; return; }
+      const u = state.currentUser;
+      state.deck = INITIAL_PROFILES.filter((p) => {
+        if (state.seen.has(p.id)) return false;
+        const iWant = u.interested_in === "BOTH" || u.interested_in === p.gender;
+        const theyWant = p.interested_in === "BOTH" || p.interested_in === u.gender;
+        return iWant && theyWant;
+      });
+    }
+
+    function createCard(p) {
+      const el = document.createElement("div");
+      el.className = "swipe-card card-shadow bg-[#12141D]";
+      el.dataset.id = p.id;
+      el._profile = p;
+      el._photoIdx = 0;
+
+      const bars = p.photos.map((_, i) =>
+        `<span class="flex-1 h-1 rounded-full ${i === 0 ? "bg-white" : "bg-white/35"}"></span>`
+      ).join("");
+
+      el.innerHTML = `
+        <div class="absolute inset-0 tinder-gradient opacity-30 pointer-events-none"></div>
+        <img class="card-photo absolute inset-0 w-full h-full object-cover pointer-events-none" src="${esc(p.photos[0])}" alt="${esc(p.name)}" draggable="false" decoding="async" />
+        <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/45 to-transparent pointer-events-none"></div>
+        <div class="card-bars absolute top-2.5 inset-x-3 flex gap-1.5 pointer-events-none ${p.photos.length > 1 ? "" : "hidden"}">${bars}</div>
+        <div class="absolute inset-x-0 bottom-0 pt-28 pb-5 px-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none">
+          <div class="flex items-baseline gap-2">
+            <h3 class="text-3xl font-black tracking-tight">${esc(p.name)}</h3>
+            <span class="text-2xl font-semibold text-white/90">${esc(p.age)}</span>
+          </div>
+          <p class="text-xs font-semibold text-white/80 mt-1">${esc(p.height)} • ${esc(p.study_year)} • ${esc(p.major)}</p>
+          <p class="card-bio text-sm text-white/75 mt-2 leading-snug line-clamp-3">${esc(p.bio)}</p>
+        </div>
+        <div class="stamp-like stamp-el like-stamp absolute top-10 left-5 px-3 py-0.5 rounded-lg text-3xl font-black tracking-widest pointer-events-none" style="opacity:0">LIKE</div>
+        <div class="stamp-nope stamp-el nope-stamp absolute top-10 right-5 px-3 py-0.5 rounded-lg text-3xl font-black tracking-widest pointer-events-none" style="opacity:0">NOPE</div>
+        <div class="absolute inset-x-0 top-[38%] flex justify-center pointer-events-none">
+          <div class="stamp-super stamp-el super-stamp px-3 py-0.5 rounded-lg text-2xl font-black tracking-widest whitespace-nowrap" style="opacity:0">SUPER LIKE</div>
+        </div>`;
+
+      const img = el.querySelector(".card-photo");
+      img.addEventListener("error", () => { img.style.visibility = "hidden"; });
+      el.addEventListener("contextmenu", (e) => e.preventDefault());
+      attachDrag(el);
+      return el;
+    }
+
+    function topCardEl() {
+      const topId = state.deck[0] && state.deck[0].id;
+      if (!topId) return null;
+      return [...$("cardsMount").children].find((c) => c.dataset.id === topId && !c._leaving) || null;
+    }
+
+    function applyDepth(el, depth, progress) {
+      if (depth <= 0) {
+        el.style.zIndex = 30;
+        el.style.pointerEvents = "auto";
+        el.style.opacity = 1;
+        el.style.transform = "translate3d(0,0,0) scale(1)";
+        return;
+      }
+      const k = Math.max(0, depth - progress);
+      el.style.zIndex = 30 - depth;
+      el.style.pointerEvents = "none";
+      el.style.opacity = depth > 2 && progress === 0 ? 0 : 1;
+      el.style.transform = `translate3d(0,${(12 * k).toFixed(1)}px,0) scale(${(1 - 0.045 * k).toFixed(4)})`;
+    }
+
+    function layoutStack(progress, skipTop) {
+      const p = progress || 0;
+      [...$("cardsMount").children].forEach((el) => {
+        if (el._leaving) return;
+        const d = state.deck.findIndex((x) => x.id === el.dataset.id);
+        if (d < 0 || (skipTop && d === 0)) return;
+        applyDepth(el, d, d === 1 ? p : 0);
+      });
+    }
+
+    function renderDeck() {
+      const mount = $("cardsMount");
+      const visible = state.deck.slice(0, STACK_SIZE);
+
+      [...mount.children].forEach((el) => {
+        if (!el._leaving && !visible.some((p) => p.id === el.dataset.id)) el.remove();
+      });
+      for (let i = visible.length - 1; i >= 0; i--) {
+        const exists = [...mount.children].some((c) => c.dataset.id === visible[i].id && !c._leaving);
+        if (!exists) mount.appendChild(createCard(visible[i]));
+      }
+      layoutStack(0);
+
+      $("emptyDeckState").classList.toggle("hidden", state.deck.length > 0);
+      $("rewindBtn").disabled = !state.canRewind;
+
+      const off = state.deck.length === 0;
+      $("actionButtonsRow").querySelectorAll("button").forEach((b, idx) => {
+        if (idx === 0) return; // rewind handles its own state
+        b.style.opacity = off ? "0.35" : "";
+        b.style.pointerEvents = off ? "none" : "";
+      });
+
+      // Warm the cache for the next cards' first photo
+      state.deck.slice(0, 4).forEach((p) => { const im = new Image(); im.src = p.photos[0]; });
+    }
+
+    /********************************************************************
+     * 13. TOUCH / MOUSE / PEN SWIPE ENGINE (Pointer Events)
+     ********************************************************************/
+    function setStamps(el, dx, dy, w, h) {
+      const likeS = el.querySelector(".like-stamp");
+      const nopeS = el.querySelector(".nope-stamp");
+      const superS = el.querySelector(".super-stamp");
+      const upward = -dy > Math.abs(dx) * 1.1;
+      const sup = upward ? clamp((-dy - 24) / (h * 0.2), 0, 1) : 0;
+      likeS.style.opacity = upward ? 0 : clamp((dx - 18) / (w * 0.22), 0, 1);
+      nopeS.style.opacity = upward ? 0 : clamp((-dx - 18) / (w * 0.22), 0, 1);
+      superS.style.opacity = sup;
+    }
+
+    function attachDrag(el) {
+      let s = null;
+
+      const paint = () => {
+        if (!s) return;
+        s.raf = 0;
+        const rot = clamp((s.dx / s.w) * 16, -20, 20);
+        el.style.transform = `translate3d(${s.dx}px,${s.dy}px,0) rotate(${rot}deg)`;
+        setStamps(el, s.dx, s.dy, s.w, s.h);
+        const progress = clamp(Math.max(Math.abs(s.dx) / (s.w * 0.5), -s.dy / (s.h * 0.4)), 0, 1);
+        layoutStack(progress, true); // never touch the card being dragged
+      };
+
+      el.addEventListener("pointerdown", (e) => {
+        if (state.busy || el._leaving || s) return;
+        if (!state.deck[0] || state.deck[0].id !== el.dataset.id) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        const r = el.getBoundingClientRect();
+        const now = performance.now();
+        s = {
+          id: e.pointerId, x: e.clientX, y: e.clientY, t: now,
+          dx: 0, dy: 0, w: r.width, h: r.height, vx: 0, vy: 0,
+          lx: e.clientX, ly: e.clientY, lt: now, moved: false, raf: 0
+        };
+        el.style.transition = "none";
+        [...$("cardsMount").children].forEach((c) => { if (c !== el) c.style.transition = "none"; });
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+
+      el.addEventListener("pointermove", (e) => {
+        if (!s || e.pointerId !== s.id) return;
+        s.dx = e.clientX - s.x;
+        s.dy = e.clientY - s.y;
+        const now = performance.now();
+        const dt = Math.max(1, now - s.lt);
+        s.vx = 0.6 * s.vx + 0.4 * ((e.clientX - s.lx) / dt);
+        s.vy = 0.6 * s.vy + 0.4 * ((e.clientY - s.ly) / dt);
+        s.lx = e.clientX; s.ly = e.clientY; s.lt = now;
+        if (!s.moved && Math.hypot(s.dx, s.dy) > 6) s.moved = true;
+        if (s.moved && !s.raf) s.raf = requestAnimationFrame(paint);
+      });
+
+      const finish = (e) => {
+        if (!s || e.pointerId !== s.id) return;
+        cancelAnimationFrame(s.raf);
+        const d = s;
+        s = null;
+        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        [...$("cardsMount").children].forEach((c) => { c.style.transition = ""; });
+        el.style.transition = "";
+
+        const elapsed = performance.now() - d.t;
+        if (e.type === "pointercancel") return snapBack(el);
+
+        if (!d.moved && elapsed < 400) {
+          snapBack(el, true);
+          return handleCardTap(el, e.clientX);
+        }
+
+        const upward = -d.dy > Math.abs(d.dx) * 1.1;
+        if (upward && (-d.dy > d.h * 0.2 || (d.vy < -0.7 && -d.dy > 30))) {
+          return commitSwipe("super", el);
+        }
+        if (d.dx > d.w * 0.28 || (d.vx > 0.55 && d.dx > 30)) return commitSwipe("right", el);
+        if (d.dx < -d.w * 0.28 || (d.vx < -0.55 && d.dx < -30)) return commitSwipe("left", el);
+        snapBack(el);
+      };
+      el.addEventListener("pointerup", finish);
+      el.addEventListener("pointercancel", finish);
+    }
+
+    function snapBack(el, instant) {
+      el.style.transition = "";
+      if (instant) el.style.transition = "none";
+      el.style.transform = "translate3d(0,0,0) scale(1)";
+      el.querySelectorAll(".stamp-el").forEach((st) => { st.style.opacity = 0; });
+      layoutStack(0);
+      if (instant) { void el.offsetWidth; el.style.transition = ""; }
+    }
+
+    function handleCardTap(el, clientX) {
+      const p = el._profile;
+      if (!p || p.photos.length < 2) return;
+      const r = el.getBoundingClientRect();
+      const goPrev = clientX - r.left < r.width * 0.4;
+      const next = clamp(el._photoIdx + (goPrev ? -1 : 1), 0, p.photos.length - 1);
+      if (next === el._photoIdx) return;
+      el._photoIdx = next;
+      const img = el.querySelector(".card-photo");
+      img.style.visibility = "visible";
+      img.src = p.photos[next];
+      el.querySelectorAll(".card-bars span").forEach((b, i) => {
+        b.className = "flex-1 h-1 rounded-full " + (i === next ? "bg-white" : "bg-white/35");
+      });
+    }
+
+    function commitSwipe(dir, el) {
+      if (state.busy || !el || el._leaving) return;
+      state.busy = true;
+      const p = el._profile;
+      el._leaving = true;
+
+      state.deck.shift();
+      state.seen.add(p.id);
+      state.lastSwipedProfile = p;
+      state.lastSwipedDir = dir;
+
+      let matched = false;
+      if (dir === "right" || dir === "super") {
+        addSentLike(p, dir === "super");
+        matched = !!p.likesMeBack && !state.isMatched;
+      }
+      state.canRewind = !matched;
+      if (matched) state.deck = []; // First Match Rule: pool locks
+
+      // Fly-out animation
+      const fast = prefersReducedMotion();
+      const ms = fast ? 1 : 420;
+      el.querySelectorAll(".stamp-el").forEach((st) => { st.style.opacity = 0; });
+      const stampSel = dir === "right" ? ".like-stamp" : dir === "left" ? ".nope-stamp" : ".super-stamp";
+      el.querySelector(stampSel).style.opacity = 1;
+
+      const dist = Math.max(window.innerWidth, 640) * 1.2;
+      const x = dir === "right" ? dist : dir === "left" ? -dist : 0;
+      const y = dir === "super" ? -Math.max(window.innerHeight, 640) * 1.1 : 40;
+      const rot = dir === "right" ? 24 : dir === "left" ? -24 : 0;
+      el.style.zIndex = 60;
+      el.style.transition = `transform ${ms}ms cubic-bezier(.2,.75,.25,1), opacity ${ms}ms ease-in`;
+      requestAnimationFrame(() => {
+        el.style.transform = `translate3d(${x}px,${y}px,0) rotate(${rot}deg)`;
+        el.style.opacity = 0;
+      });
+
+      renderDeck();
+
+      setTimeout(() => {
+        el.remove();
+        state.busy = false;
+        $("rewindBtn").disabled = !state.canRewind;
+        if (matched) triggerMatch(p);
+      }, ms + 30);
+    }
+
+    function triggerButtonSwipe(dir) {
+      if (state.busy || !state.gateCounts.isUnlocked) return;
+      const el = topCardEl();
+      if (!el) return;
+      commitSwipe(dir, el);
+    }
+
+    function handleRewind() {
+      if (state.busy || !state.canRewind || !state.lastSwipedProfile) return;
+      const p = state.lastSwipedProfile;
+      const dir = state.lastSwipedDir;
+
+      state.seen.delete(p.id);
+      if (dir === "right" || dir === "super") {
+        state.sentLikes = state.sentLikes.filter((s) => s.id !== p.id);
+        updateSentUI();
+      }
+      state.deck.unshift(p);
+      state.canRewind = false;
+      state.lastSwipedProfile = null;
+      renderDeck();
+
+      const el = topCardEl();
+      if (el && el.animate && !prefersReducedMotion()) {
+        const from = dir === "super"
+          ? "translate3d(0,-120%,0) rotate(0deg)"
+          : `translate3d(${dir === "left" ? "-" : ""}120%,0,0) rotate(${dir === "left" ? -18 : 18}deg)`;
+        el.animate(
+          [
+            { transform: from, opacity: 0 },
+            { transform: "translate3d(0,0,0) rotate(0deg) scale(1)", opacity: 1 }
+          ],
+          { duration: 380, easing: "cubic-bezier(.2,.75,.25,1)" }
+        );
+      }
+    }
+
+    function resetDemoProfiles() {
+      state.seen.clear();
+      state.sentLikes = [];
+      state.lastSwipedProfile = null;
+      state.canRewind = false;
+      if (state.isMatched) resetMatchState();
+      [...$("cardsMount").children].forEach((c) => c.remove());
+      buildDeck();
+      renderDeck();
+      updateSentUI();
+      showToast("Demo profiles reloaded");
+    }
+
+    /********************************************************************
+     * 14. SENT LIKES (SIDEBAR + MOBILE DRAWER)
+     ********************************************************************/
+    function addSentLike(p, isSuper) {
+      if (!state.sentLikes.some((s) => s.id === p.id)) {
+        state.sentLikes.push({ id: p.id, name: p.name, photo: p.photos[0], isSuper: !!isSuper });
+      }
+      updateSentUI();
+      if ($("mobileSentDrawer").classList.contains("hidden")) $("mobileSentDot").classList.remove("hidden");
+    }
+
+    function sentRowHTML(s) {
+      return `
+        <div class="flex items-center gap-3 p-2.5 rounded-2xl bg-white/5 border border-white/10">
+          <img src="${esc(s.photo)}" alt="" draggable="false" class="w-11 h-11 rounded-full object-cover border-2 ${s.isSuper ? "border-sky-400" : "border-pink-500"}" />
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-extrabold truncate">${esc(s.name)}${s.isSuper ? " ⭐" : ""}</p>
+            <p class="text-[11px] text-white/50">Waiting for a mutual like…</p>
+          </div>
+        </div>`;
+    }
+
+    function updateSentUI() {
+      $("sentCountBadge").textContent = state.sentLikes.length;
+      const html = state.sentLikes.length
+        ? state.sentLikes.slice().reverse().map(sentRowHTML).join("")
+        : `<p class="text-xs text-white/45 text-center py-6">No likes sent yet. Swipe right on someone you like!</p>`;
+      $("sentLikesList").innerHTML = html;
+      $("mobileSentLikesList").innerHTML = html;
+      if (!state.sentLikes.length) $("mobileSentDot").classList.add("hidden");
+    }
+
+    function switchSidebarTab(tab) {
+      const isMatch = tab === "match";
+      $("sidePanelMatch").classList.toggle("hidden", !isMatch);
+      $("sidePanelSent").classList.toggle("hidden", isMatch);
+      $("sideTabMatch").className = "py-3.5 border-b-2 " + (isMatch ? "border-pink-500 text-pink-400" : "border-transparent text-white/50 hover:text-white");
+      $("sideTabSent").className = "py-3.5 border-b-2 " + (!isMatch ? "border-pink-500 text-pink-400" : "border-transparent text-white/50 hover:text-white");
+    }
+
+    function openMobileSentDrawer() {
+      $("mobileSentDrawer").classList.remove("hidden");
+      $("mobileSentDot").classList.add("hidden");
+    }
+    function closeMobileSentDrawer() {
+      $("mobileSentDrawer").classList.add("hidden");
+    }
+    $("mobileSentDrawer").addEventListener("click", (e) => {
+      if (e.target === $("mobileSentDrawer")) closeMobileSentDrawer();
+    });
+
+    /********************************************************************
+     * 15. MATCH, CHAT, UNMATCH, REPORT
+     ********************************************************************/
+    const REPLIES = [
+      "Haha okay, I like where this is going 😄",
+      "So are you actually dancing at prom, or just standing near the snacks?",
+      "Tell me more!",
+      "C&D after class tomorrow? ☕",
+      "That's honestly so cute 😂",
+      "Okay deal. Don't forget the shoes rule 👀"
+    ];
+    let replyCursor = 0;
+    let replyTimer = null;
+
+    function triggerMatch(p) {
+      state.isMatched = true;
+      state.matchedPartner = p;
+      state.chatMessages = [{ from: "them", text: "Hey! 👋 Looks like we're prom dates now." }];
+      replyCursor = 0;
+
+      $("matchModalSubtitle").textContent = "You and " + p.name + " have liked each other for SNU Prom.";
+      $("matchModalMyImg").src = state.currentUser.photos[0];
+      $("matchModalPartnerImg").src = p.photos[0];
+      $("matchCelebrationModal").classList.remove("hidden");
+      $("chatUnreadDot").classList.remove("hidden");
+      updateMatchPanel();
+      renderDeck();
+    }
+
+    function closeMatchModalAndChat() {
+      $("matchCelebrationModal").classList.add("hidden");
+      openChatScreen();
+    }
+
+    function updateMatchPanel() {
+      const p = state.matchedPartner;
+      $("noMatchYetCard").classList.toggle("hidden", state.isMatched);
+      $("activeMatchCard").classList.toggle("hidden", !state.isMatched);
+      if (state.isMatched && p) {
+        $("sideMatchPhoto").src = p.photos[0];
+        $("sideMatchName").textContent = p.name;
+        const last = state.chatMessages[state.chatMessages.length - 1];
+        $("sideMatchPreview").textContent = last ? last.text : "Tap to open your Prom Chat 💬";
+      }
+    }
+
+    function openChatScreen() {
+      if (!state.isMatched || !state.matchedPartner) {
+        showToast("Your Prom Chat unlocks on your first mutual like 💘");
+        return;
+      }
+      const p = state.matchedPartner;
+      $("chatPartnerAvatar").src = p.photos[0];
+      $("chatPartnerName").textContent = p.name;
+      $("chatPartnerMeta").textContent = p.height + " • " + p.study_year + " • " + p.major;
+      $("chatUnreadDot").classList.add("hidden");
+      $("coupleChatView").classList.remove("hidden");
+      renderChat();
+    }
+
+    function closeChatScreen() {
+      $("coupleChatView").classList.add("hidden");
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    }
+
+    function renderChat() {
+      const box = $("chatMessagesBox");
+      box.innerHTML = state.chatMessages.map((m) => {
+        const mine = m.from === "me";
+        return `<div class="flex ${mine ? "justify-end" : "justify-start"}">
+          <div class="max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-snug break-words ${mine ? "tinder-gradient text-white rounded-br-md" : "apple-glass-pill text-white rounded-bl-md"}" style="user-select:text;-webkit-user-select:text">${esc(m.text)}</div>
+        </div>`;
+      }).join("");
+      box.scrollTop = box.scrollHeight;
+      updateMatchPanel();
+    }
+
+    function sendChatMessage(e) {
+      e.preventDefault();
+      const input = $("chatInput");
+      const text = input.value.trim();
+      if (!text || !state.isMatched) return;
+      state.chatMessages.push({ from: "me", text });
+      input.value = "";
+      renderChat();
+      input.focus({ preventScroll: true });
+
+      clearTimeout(replyTimer);
+      replyTimer = setTimeout(() => {
+        if (!state.isMatched) return;
+        state.chatMessages.push({ from: "them", text: REPLIES[replyCursor++ % REPLIES.length] });
+        if ($("coupleChatView").classList.contains("hidden")) $("chatUnreadDot").classList.remove("hidden");
+        renderChat();
+      }, 1100 + Math.random() * 900);
+    }
+
+    function resetMatchState() {
+      clearTimeout(replyTimer);
+      state.isMatched = false;
+      state.matchedPartner = null;
+      state.chatMessages = [];
+      state.canRewind = false;
+      $("coupleChatView").classList.add("hidden");
+      $("matchCelebrationModal").classList.add("hidden");
+      $("chatUnreadDot").classList.add("hidden");
+      updateMatchPanel();
+    }
+
+    function unmatchPartner() {
+      if (!state.isMatched) return;
+      if (!window.confirm("Unmatch from " + state.matchedPartner.name + "? Your chat will be deleted.")) return;
+      resetMatchState();
+      buildDeck();
+      renderDeck();
+      showToast("Unmatched. Swiping is live again.");
+    }
+
+    function openReportModal(profile) {
+      if (!profile) return;
+      state.reportTarget = profile;
+      $("reportTargetName").textContent = profile.name;
+      $("reportModal").classList.remove("hidden");
+    }
+    function closeReportModal() {
+      $("reportModal").classList.add("hidden");
+      state.reportTarget = null;
+    }
+    function confirmSilentReport(reason) {
+      const target = state.reportTarget;
+      closeReportModal();
+      if (!target) return;
+      console.info("Anonymous report filed:", target.id, reason);
+      if (state.isMatched && state.matchedPartner && state.matchedPartner.id === target.id) {
+        resetMatchState();
+        buildDeck();
+        renderDeck();
+      }
+      showToast("Report sent anonymously. Thank you.");
+    }
+
+    /********************************************************************
+     * 16. LOGOUT
+     ********************************************************************/
+    async function logoutUser() {
+      if (supabaseClient) { try { await supabaseClient.auth.signOut(); } catch (_) {} }
+      resetMatchState();
+      state.seen.clear();
+      state.sentLikes = [];
+      state.deck = [];
+      state.lastSwipedProfile = null;
+      [...$("cardsMount").children].forEach((c) => c.remove());
+      closeMobileSentDrawer();
+      closeReportModal();
+      updateSentUI();
+      $("appView").classList.add("hidden");
+      $("onboardingView").classList.add("hidden");
+      $("authView").classList.remove("hidden");
+      switchAuthMode("login");
+      $("loginPassword").value = "";
+    }
+
+    /********************************************************************
+     * 17. KEYBOARD SHORTCUTS (DESKTOP)
+     ********************************************************************/
+    document.addEventListener("keydown", (e) => {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ""))) return;
+      if ($("appView").classList.contains("hidden")) return;
+      if (e.key === "Escape") {
+        if (!$("reportModal").classList.contains("hidden")) return closeReportModal();
+        if (!$("matchCelebrationModal").classList.contains("hidden")) return closeMatchModalAndChat();
+        if (!$("mobileSentDrawer").classList.contains("hidden")) return closeMobileSentDrawer();
+        if (!$("coupleChatView").classList.contains("hidden")) return closeChatScreen();
+        return;
+      }
+      if (!$("coupleChatView").classList.contains("hidden")) return;
+      if (e.key === "ArrowLeft") { e.preventDefault(); triggerButtonSwipe("left"); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); triggerButtonSwipe("right"); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); triggerButtonSwipe("super"); }
+    });
+
+    /********************************************************************
+     * 18. INIT
+     ********************************************************************/
+    updateGateUI();
+    updateSentUI();
+    selectGender("M");
+    selectPreference("F");
+  </script>
+</body>
+</html>
