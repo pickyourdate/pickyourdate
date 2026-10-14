@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Pick Ur Date | SNU Prom</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --tinder-pink: #FD267A;
+      --tinder-orange: #FF6036;
+      --tinder-grad: linear-gradient(45deg, #FD267A 0%, #FF6036 100%);
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #090A0F;
+      color: #FFFFFF;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100dvh;
+      width: 100vw;
+    }
+    .tinder-gradient {
+      background: var(--tinder-grad);
+    }
+    .tinder-text-gradient {
+      background: var(--tinder-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    /* Apple Liquid Glass UI */
+    .apple-glass {
+      background: rgba(24, 26, 34, 0.72);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+    .apple-glass-pill {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .card-shadow {
+      box-shadow: 0 22px 48px -12px rgba(0, 0, 0, 0.85);
+    }
+    .swipe-card {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      overflow: hidden;
+      touch-action: none;
+      will-change: transform;
+      transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.15), opacity 0.25s ease;
+    }
+    .stamp-like {
+      border: 4px solid #00E676;
+      color: #00E676;
+      transform: rotate(-16deg);
+      text-shadow: 0 2px 10px rgba(0, 230, 118, 0.35);
+    }
+    .stamp-nope {
+      border: 4px solid #FF1744;
+      color: #FF1744;
+      transform: rotate(16deg);
+      text-shadow: 0 2px 10px rgba(255, 23, 68, 0.35);
+    }
+    .stamp-super {
+      border: 4px solid #00B0FF;
+      color: #00B0FF;
+      transform: rotate(-6deg);
+      text-shadow: 0 2px 10px rgba(0, 176, 255, 0.35);
+    }
+    input, textarea, select {
+      user-select: text !important;
+    }
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-full w-full relative">
+
+  <!-- TOP DEMO / SANDBOX BAR (Remove or hide in production once 50 users join) -->
+  <div id="sandboxBar" class="w-full bg-[#12131A] border-b border-white/10 px-3 py-1.5 flex items-center justify-between text-xs z-50">
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="text-white/70 font-medium">SNU Prom Mode:</span>
+      <span id="gateBadgeText" class="text-pink-400 font-semibold">Launch Gate Active (39/50)</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="toggleGateLock()" class="px-2.5 py-1 rounded-full apple-glass-pill hover:bg-white/15 text-white/90 font-semibold transition">
+        Toggle 25M/25F Gate
+      </button>
+      <button onclick="enterInstantDemo()" class="px-2.5 py-1 rounded-full tinder-gradient text-white font-bold shadow transition hover:opacity-90">
+        Instant Demo
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. AUTHENTICATION VIEW (SIGN IN / CREATE ACCOUNT / FORGOT PASSWORD) -->
+  <section id="authView" class="flex-1 flex items-center justify-center p-4 relative overflow-y-auto">
+    <!-- Ambient background glow -->
+    <div class="absolute -top-28 -left-28 w-96 h-96 rounded-full bg-pink-600/20 blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-28 -right-28 w-96 h-96 rounded-full bg-orange-500/20 blur-3xl pointer-events-none"></div>
+
+    <div class="apple-glass w-full max-w-md rounded-3xl p-7 sm:p-8 relative z-10">
+      <!-- Brand Header -->
+      <div class="flex flex-col items-center text-center mb-6">
+        <div class="w-14 h-14 rounded-2xl tinder-gradient flex items-center justify-center shadow-lg shadow-pink-500/30 mb-3">
+          <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16.56 11.4C16.29 7.82 14.1 4.88 11.45 3.12c-.34-.23-.8-.01-.82.4-.09 1.72-.71 3.4-1.92 4.54-.52.49-1.13.87-1.76 1.24-.22.13-.49-.04-.47-.29.06-.86-.05-1.76-.38-2.56-.17-.4-.69-.48-.97-.15C3.52 8.21 2.7 10.74 3.07 13.4c.53 3.82 3.69 6.99 7.52 7.5 4.89.66 9.13-2.92 9.4-7.61.07-1.22-.16-2.4-.63-3.46-.18-.41-.73-.43-.96-.05-.37.62-.89 1.15-1.51 1.52-.21.12-.31.02-.33-.1z"/>
+          </svg>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Pick Ur Date</h1>
+        <p class="text-xs sm:text-sm text-white/60 mt-1">Exclusive SNU Prom Matchmaker • 1 Account Per Student</p>
+      </div>
+
+      <!-- Auth Tabs -->
+      <div id="authTabRow" class="grid grid-cols-2 p-1 rounded-2xl bg-black/40 border border-white/10 mb-6 text-xs font-bold">
+        <button id="tabLoginBtn" onclick="switchAuthMode('login')" class="py-2.5 rounded-xl tinder-gradient text-white shadow transition">Sign In</button>
+        <button id="tabRegisterBtn" onclick="switchAuthMode('register')" class="py-2.5 rounded-xl text-white/60 hover:text-white transition">Create Account</button>
+      </div>
+
+      <!-- Error / Info Banner -->
+      <div id="authAlert" class="hidden mb-4 p-3 rounded-xl text-xs font-semibold border"></div>
+
+      <!-- SIGN IN FORM -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">Email Address</label>
+          <input id="loginEmail" type="email" required placeholder="you@gmail.com" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60">Password</label>
+            <button type="button" onclick="switchAuthMode('forgot')" class="text-xs text-pink-400 hover:underline font-semibold">Forgot Password?</button>
+          </div>
+          <input id="loginPassword" type="password" required minlength="6" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg shadow-pink-500/25 hover:opacity-95 active:scale-[0.99] transition">
+          Log In
+        </button>
+      </form>
+
+      <!-- REGISTER FORM (Email + Password + Unique +91 Phone + Unique SNU Roll No) -->
+      <form id="registerForm" onsubmit="handleRegister(event)" class="hidden space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Personal Email</label>
+          <input id="regEmail" type="email" required placeholder="yourname@gmail.com" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Mobile (+91)</label>
+            <input id="regPhone" type="tel" required pattern="^[6-9][0-9]{9}$" maxlength="10" placeholder="9876543210" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">SNU Roll No.</label>
+            <input id="regRoll" type="text" required pattern="^[0-9]{8,12}$" maxlength="12" placeholder="2410110452" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Set Password</label>
+          <input id="regPassword" type="password" required minlength="6" placeholder="Min. 6 characters" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+        </div>
+        <p class="text-[11px] text-white/50 leading-relaxed">
+          🔒 Your phone number, SNU Roll Number, and device hardware ID are permanently bound to 1 account. Fake profiles are banned on report.
+        </p>
+        <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg shadow-pink-500/25 hover:opacity-95 active:scale-[0.99] transition">
+          Continue to Profile Setup
+        </button>
+      </form>
+
+      <!-- FORGOT PASSWORD FORM -->
+      <form id="forgotForm" onsubmit="handleForgot(event)" class="hidden space-y-4">
+        <p class="text-xs text-white/70">Enter your registered email address and we'll send you a password reset link.</p>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">Registered Email</label>
+          <input id="forgotEmail" type="email" required placeholder="you@gmail.com" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg">
+          Send Reset Link
+        </button>
+        <button type="button" onclick="switchAuthMode('login')" class="w-full py-2 text-xs text-white/60 hover:text-white font-semibold">
+          ← Back to Sign In
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- 2. ONBOARDING VIEW (FULL-BODY REAL PHOTO VALIDATION + BIO + HIDDEN PREFS) -->
+  <section id="onboardingView" class="hidden flex-1 flex items-center justify-center p-4 overflow-y-auto">
+    <div class="apple-glass w-full max-w-lg rounded-3xl p-6 sm:p-8 my-auto">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <span class="text-[11px] font-extrabold uppercase tracking-widest text-pink-400">Step <span id="onboardStepNum">1</span> of 3</span>
+          <h2 class="text-xl sm:text-2xl font-black mt-0.5" id="onboardStepTitle">Upload Full-Body Photo</h2>
+        </div>
+        <div class="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
+          <div id="onboardProgress" class="h-full tinder-gradient transition-all duration-300" style="width: 33%;"></div>
+        </div>
+      </div>
+
+      <!-- STEP 1: REAL FULL-BODY PORTRAIT PHOTO UPLOAD -->
+      <div id="onboardStep1" class="space-y-4">
+        <p class="text-xs text-white/70 leading-relaxed">
+          Upload at least <strong>1 clear, vertical full-body photo of yourself</strong>. Memes, landscape screenshots, blank images, or celebrity photos will be rejected or banned on report.
+        </p>
+
+        <div class="grid grid-cols-3 gap-3">
+          <!-- Primary Full Body Slot -->
+          <label class="relative aspect-[3/4] rounded-2xl border-2 border-dashed border-pink-500/60 bg-white/5 hover:bg-white/10 flex flex-col items-center justify-center cursor-pointer overflow-hidden group">
+            <img id="previewPhoto0" class="hidden w-full h-full object-cover" />
+            <div id="placeholderPhoto0" class="flex flex-col items-center text-center p-2">
+              <span class="w-8 h-8 rounded-full tinder-gradient flex items-center justify-center text-white font-black text-lg mb-1.5">+</span>
+              <span class="text-[11px] font-bold text-white/90">Full-Body Photo*</span>
+              <span class="text-[9px] text-white/50 mt-0.5">Required</span>
+            </div>
+            <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="handlePhotoUpload(event, 0)" />
+          </label>
+
+          <!-- Optional Slot 2 -->
+          <label class="relative aspect-[3/4] rounded-2xl border border-white/15 bg-white/5 hover:bg-white/10 flex flex-col items-center justify-center cursor-pointer overflow-hidden">
+            <img id="previewPhoto1" class="hidden w-full h-full object-cover" />
+            <div id="placeholderPhoto1" class="flex flex-col items-center text-center p-2">
+              <span class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/70 font-bold">+</span>
+              <span class="text-[10px] text-white/50 mt-1">Photo 2</span>
+            </div>
+            <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="handlePhotoUpload(event, 1)" />
+          </label>
+
+          <!-- Optional Slot 3 -->
+          <label class="relative aspect-[3/4] rounded-2xl border border-white/15 bg-white/5 hover:bg-white/10 flex flex-col items-center justify-center cursor-pointer overflow-hidden">
+            <img id="previewPhoto2" class="hidden w-full h-full object-cover" />
+            <div id="placeholderPhoto2" class="flex flex-col items-center text-center p-2">
+              <span class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/70 font-bold">+</span>
+              <span class="text-[10px] text-white/50 mt-1">Photo 3</span>
+            </div>
+            <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="handlePhotoUpload(event, 2)" />
+          </label>
+        </div>
+
+        <div id="photoCheckStatus" class="hidden p-3 rounded-xl text-xs font-semibold border"></div>
+
+        <button type="button" onclick="nextOnboardStep(2)" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm shadow-lg">
+          Next: Your Details →
+        </button>
+      </div>
+
+      <!-- STEP 2: NAME, AGE, HEIGHT, YEAR, BIO -->
+      <div id="onboardStep2" class="hidden space-y-3.5">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-white/60 mb-1">First Name</label>
+            <input id="obName" type="text" required placeholder="Aarav" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-white/60 mb-1">Age</label>
+            <input id="obAge" type="number" min="17" max="25" value="19" required class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-white/60 mb-1">Height</label>
+            <select id="obHeight" class="w-full px-3.5 py-2.5 rounded-xl bg-[#181A24] border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500">
+              <option value="5'1&quot;">5'1" (155 cm)</option>
+              <option value="5'3&quot;">5'3" (160 cm)</option>
+              <option value="5'5&quot;">5'5" (165 cm)</option>
+              <option value="5'7&quot;">5'7" (170 cm)</option>
+              <option value="5'9&quot;" selected>5'9" (175 cm)</option>
+              <option value="5'11&quot;">5'11" (180 cm)</option>
+              <option value="6'1&quot;">6'1" (185 cm)</option>
+              <option value="6'3&quot;+">6'3"+ (190+ cm)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-white/60 mb-1">Study Year</label>
+            <select id="obYear" class="w-full px-3.5 py-2.5 rounded-xl bg-[#181A24] border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500">
+              <option value="1st Year">1st Year</option>
+              <option value="2nd Year" selected>2nd Year</option>
+              <option value="3rd Year">3rd Year</option>
+              <option value="4th Year">4th Year</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-white/60 mb-1">Department / Major</label>
+          <input id="obMajor" type="text" placeholder="Mechanical Engineering / CSE / BMS" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-white/60 mb-1">About Me (Prom Bio)</label>
+          <textarea id="obBio" rows="3" maxlength="220" placeholder="Late night C&D coffee runs, badminton court regular, looking for a prom date who doesn't step on my shoes..." class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500"></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-1">
+          <button type="button" onclick="nextOnboardStep(1)" class="w-1/3 py-3 rounded-full apple-glass-pill text-xs font-bold">← Back</button>
+          <button type="button" onclick="nextOnboardStep(3)" class="w-2/3 py-3 rounded-full tinder-gradient text-white font-extrabold text-sm shadow-lg">Next: Preferences →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: GENDER & STRICTLY HIDDEN PREFERENCE -->
+      <div id="onboardStep3" class="hidden space-y-5">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-2">I am a</label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" id="genderBtnM" onclick="selectGender('M')" class="py-3.5 rounded-2xl border border-pink-500 bg-pink-500/20 font-extrabold text-sm">Man</button>
+            <button type="button" id="genderBtnF" onclick="selectGender('F')" class="py-3.5 rounded-2xl border border-white/15 bg-white/5 font-bold text-sm text-white/70">Woman</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60">Show Me (Strictly Hidden)</label>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">100% Private</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2.5">
+            <button type="button" id="prefBtnF" onclick="selectPreference('F')" class="py-3 rounded-2xl border border-pink-500 bg-pink-500/20 font-extrabold text-xs">Women</button>
+            <button type="button" id="prefBtnM" onclick="selectPreference('M')" class="py-3 rounded-2xl border border-white/15 bg-white/5 font-bold text-xs text-white/70">Men</button>
+            <button type="button" id="prefBtnBOTH" onclick="selectPreference('BOTH')" class="py-3 rounded-2xl border border-white/15 bg-white/5 font-bold text-xs text-white/70">Everyone</button>
+          </div>
+          <p class="text-[11px] text-white/50 mt-2">
+            Your gender and preference are never shown on your card and are only used to filter your compatible swipe feed.
+          </p>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="nextOnboardStep(2)" class="w-1/3 py-3.5 rounded-full apple-glass-pill text-xs font-bold">← Back</button>
+          <button type="button" onclick="completeOnboarding()" class="w-2/3 py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm shadow-lg">Enter Pick Ur Date 🔥</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. MAIN APPLICATION VIEW (DESKTOP SPLIT VIEW + MOBILE TINDER SHELL) -->
+  <section id="appView" class="hidden flex-1 flex h-full w-full overflow-hidden">
+
+    <!-- LEFT SIDEBAR (Desktop Visible / Mobile Drawer for Sent Likes & Couple Chat) -->
+    <aside id="leftSidebar" class="hidden md:flex md:w-80 lg:w-96 flex-col bg-[#11131A] border-r border-white/10 h-full z-30">
+      <!-- Current User Profile Header -->
+      <div class="p-4 tinder-gradient flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img id="myAvatarImg" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80" class="w-10 h-10 rounded-full object-cover border-2 border-white" />
+          <div>
+            <h3 id="myProfileName" class="font-extrabold text-sm leading-tight">SNU Student</h3>
+            <span id="myRollBadge" class="text-[11px] text-white/85 font-medium">Verified Campus ID</span>
+          </div>
+        </div>
+        <button onclick="logoutUser()" title="Sign Out" class="p-2 rounded-full bg-black/25 hover:bg-black/40 text-white transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Sidebar Tabs: Prom Match vs Likes You Sent -->
+      <div class="grid grid-cols-2 border-b border-white/10 text-xs font-extrabold tracking-wide">
+        <button id="sideTabMatch" onclick="switchSidebarTab('match')" class="py-3.5 border-b-2 border-pink-500 text-pink-400">Prom Match</button>
+        <button id="sideTabSent" onclick="switchSidebarTab('sent')" class="py-3.5 border-b-2 border-transparent text-white/50 hover:text-white">Likes Sent (<span id="sentCountBadge">0</span>)</button>
+      </div>
+
+      <!-- Tab Content: Prom Match Status -->
+      <div id="sidePanelMatch" class="flex-1 p-4 overflow-y-auto">
+        <div id="noMatchYetCard" class="h-full flex flex-col items-center justify-center text-center px-4">
+          <div class="w-16 h-16 rounded-full tinder-gradient p-0.5 mb-3">
+            <div class="w-full h-full bg-[#11131A] rounded-full flex items-center justify-center">
+              <span class="text-2xl">💃</span>
+            </div>
+          </div>
+          <h4 class="font-extrabold text-base">Start Swiping</h4>
+          <p class="text-xs text-white/55 mt-1 leading-relaxed">
+            Incoming likes are hidden. As soon as someone you liked also likes you back, you both lock in as official Prom Dates and unlock live chat!
+          </p>
+        </div>
+
+        <!-- Matched Partner Mini Card -->
+        <div id="activeMatchCard" onclick="openChatScreen()" class="hidden p-3 rounded-2xl apple-glass cursor-pointer hover:border-pink-500/50 transition">
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <img id="sideMatchPhoto" src="" class="w-14 h-14 rounded-full object-cover border-2 border-pink-500" />
+              <span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#11131A]"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <h4 id="sideMatchName" class="font-extrabold text-sm truncate"></h4>
+                <span class="text-[10px] px-2 py-0.5 rounded-full tinder-gradient font-bold">PROM LOCK</span>
+              </div>
+              <p id="sideMatchPreview" class="text-xs text-white/60 truncate mt-0.5">Tap to open your Prom Chat 💬</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Outgoing Likes Sent -->
+      <div id="sidePanelSent" class="hidden flex-1 p-4 overflow-y-auto space-y-2.5">
+        <p class="text-[11px] text-white/50 mb-2">People you swiped right on (incoming likes remain private until mutual match):</p>
+        <div id="sentLikesList" class="space-y-2"></div>
+      </div>
+    </aside>
+
+    <!-- MAIN CENTER STAGE -->
+    <main class="flex-1 flex flex-col h-full relative bg-[#090A0F]">
+
+      <!-- Mobile Top Navigation Bar -->
+      <header class="h-14 px-4 flex items-center justify-between border-b border-white/10 z-20">
+        <button onclick="openMobileSentDrawer()" class="md:hidden p-2 rounded-full text-white/70 hover:text-white relative">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          <span id="mobileSentDot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-pink-500"></span>
+        </button>
+
+        <div class="flex items-center gap-1.5 mx-auto md:mx-0">
+          <svg class="w-6 h-6 text-[#FD267A]" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16.56 11.4C16.29 7.82 14.1 4.88 11.45 3.12c-.34-.23-.8-.01-.82.4-.09 1.72-.71 3.4-1.92 4.54-.52.49-1.13.87-1.76 1.24-.22.13-.49-.04-.47-.29.06-.86-.05-1.76-.38-2.56-.17-.4-.69-.48-.97-.15C3.52 8.21 2.7 10.74 3.07 13.4c.53 3.82 3.69 6.99 7.52 7.5 4.89.66 9.13-2.92 9.4-7.61.07-1.22-.16-2.4-.63-3.46-.18-.41-.73-.43-.96-.05-.37.62-.89 1.15-1.51 1.52-.21.12-.31.02-.33-.1z"/>
+          </svg>
+          <span class="font-black text-lg tracking-tight tinder-text-gradient">pick ur date</span>
+        </div>
+
+        <button onclick="openChatScreen()" class="p-2 rounded-full text-white/70 hover:text-white relative">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          <span id="chatUnreadDot" class="hidden absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+        </button>
+      </header>
+
+      <!-- A. 25 MALE + 25 FEMALE LAUNCH GATE OVERLAY -->
+      <div id="launchGateOverlay" class="hidden flex-1 flex items-center justify-center p-5">
+        <div class="apple-glass max-w-md w-full rounded-3xl p-7 text-center">
+          <div class="w-16 h-16 rounded-2xl tinder-gradient mx-auto flex items-center justify-center shadow-lg shadow-pink-500/30 mb-4">
+            <span class="text-3xl">⏳</span>
+          </div>
+          <h2 class="text-2xl font-black">Campus Pool Filling Up</h2>
+          <p class="text-xs text-white/65 mt-2 leading-relaxed">
+            To make sure everyone gets a fair shot at a Prom Date, swiping unlocks automatically as soon as <strong>25 Men</strong> and <strong>25 Women</strong> from SNU complete registration.
+          </p>
+
+          <!-- Progress Bars -->
+          <div class="mt-6 space-y-4 text-left">
+            <div>
+              <div class="flex justify-between text-xs font-bold mb-1">
+                <span class="text-white/80">Total Registered</span>
+                <span id="gateTotalLabel" class="text-pink-400">39 / 50 Students</span>
+              </div>
+              <div class="w-full h-3 bg-white/10 rounded-full overflow-hidden">
+                <div id="gateTotalBar" class="h-full tinder-gradient rounded-full transition-all duration-500" style="width: 78%;"></div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div class="p-3 rounded-2xl bg-white/5 border border-white/10">
+                <div class="flex justify-between text-[11px] font-bold mb-1">
+                  <span class="text-white/60">Women</span>
+                  <span id="gateFemaleCount" class="text-pink-400">21 / 25</span>
+                </div>
+                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div id="gateFemaleBar" class="h-full bg-pink-500" style="width: 84%;"></div>
+                </div>
+              </div>
+              <div class="p-3 rounded-2xl bg-white/5 border border-white/10">
+                <div class="flex justify-between text-[11px] font-bold mb-1">
+                  <span class="text-white/60">Men</span>
+                  <span id="gateMaleCount" class="text-orange-400">18 / 25</span>
+                </div>
+                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div id="gateMaleBar" class="h-full bg-orange-500" style="width: 72%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="unlockDemoPoolNow()" class="mt-6 w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm shadow-lg hover:opacity-95 transition">
+            Try Interactive Demo Deck Now 🔥
+          </button>
+        </div>
+      </div>
+
+      <!-- B. SWIPE DECK CONTAINER -->
+      <div id="swipeDeckWrapper" class="flex-1 flex flex-col items-center justify-between p-3 sm:p-5 overflow-hidden">
+
+        <!-- Card Stack Area -->
+        <div id="cardStage" class="relative w-full max-w-[390px] flex-1 max-h-[610px] my-auto">
+
+          <!-- Empty Radar State -->
+          <div id="emptyDeckState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center p-6 apple-glass rounded-3xl">
+            <div class="relative flex items-center justify-center mb-5">
+              <span class="absolute w-28 h-28 rounded-full bg-pink-500/20 animate-ping"></span>
+              <span class=" relative w-20 h-20 rounded-full tinder-gradient flex items-center justify-center text-3xl shadow-xl">🔥</span>
+            </div>
+            <h3 class="text-lg font-black">There's no one new around you.</h3>
+            <p class="text-xs text-white/60 mt-1.5 max-w-xs leading-relaxed">
+              You've seen all compatible SNU students in your preference category. Check back soon or rewind your last swipe!
+            </p>
+            <button onclick="resetDemoProfiles()" class="mt-5 px-5 py-2.5 rounded-full apple-glass-pill text-xs font-extrabold text-pink-400 hover:bg-white/15 transition">
+              Reload Demo Profiles
+            </button>
+          </div>
+
+          <!-- Dynamic Cards Injected Here -->
+          <div id="cardsMount" class="relative w-full h-full"></div>
+        </div>
+
+        <!-- Official Tinder Bottom Action Buttons -->
+        <div id="actionButtonsRow" class="flex items-center justify-center gap-4 sm:gap-5 pt-3 pb-1 z-20">
+          <!-- 1-Step Rewind Button -->
+          <button id="rewindBtn" onclick="handleRewind()" disabled class="w-12 h-12 rounded-full bg-[#181A24] border border-white/15 flex items-center justify-center text-amber-400 disabled:opacity-30 hover:scale-110 active:scale-95 transition shadow-lg" title="Rewind Last Swipe (Max 1)">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+          </button>
+
+          <!-- Pass / Left Button -->
+          <button onclick="triggerButtonSwipe('left')" class="w-15 h-15 sm:w-16 sm:h-16 p-4 rounded-full bg-[#181A24] border border-rose-500/40 flex items-center justify-center text-rose-500 hover:scale-110 active:scale-95 transition shadow-xl" title="Nope (Left Arrow)">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <!-- Super Like Button -->
+          <button onclick="triggerButtonSwipe('super')" class="w-12 h-12 rounded-full bg-[#181A24] border border-sky-400/40 flex items-center justify-center text-sky-400 hover:scale-110 active:scale-95 transition shadow-lg" title="Super Like (Up Arrow)">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+            </svg>
+          </button>
+
+          <!-- Like / Right Button -->
+          <button onclick="triggerButtonSwipe('right')" class="w-15 h-15 sm:w-16 sm:h-16 p-4 rounded-full bg-[#181A24] border border-emerald-400/40 flex items-center justify-center text-emerald-400 hover:scale-110 active:scale-95 transition shadow-xl" title="Like (Right Arrow)">
+            <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- C. LOCKED MATCH & REAL-TIME COUPLE CHAT SCREEN -->
+      <div id="coupleChatView" class="hidden absolute inset-0 bg-[#090A0F] z-30 flex flex-col">
+        <!-- Chat Header -->
+        <div class="px-4 py-3 bg-[#12141D] border-b border-white/10 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <img id="chatPartnerAvatar" src="" class="w-11 h-11 rounded-full object-cover border-2 border-pink-500" />
+            <div>
+              <div class="flex items-center gap-1.5">
+                <h3 id="chatPartnerName" class="font-extrabold text-sm"></h3>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">Official Prom Match</span>
+              </div>
+              <p id="chatPartnerMeta" class="text-[11px] text-white/55"></p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Silent Report Button inside Chat -->
+            <button onclick="openReportModal(state.matchedPartner)" class="px-3 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold transition" title="Report Fake or Abusive User">
+              🚩 Report
+            </button>
+            <button onclick="unmatchPartner()" class="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/60 text-xs font-semibold transition">
+              Unmatch
+            </button>
+          </div>
+        </div>
+
+        <!-- Lock Notice Banner -->
+        <div class="bg-pink-500/10 border-b border-pink-500/20 px-4 py-2 text-center text-[11px] text-pink-200 font-medium">
+          🔒 First Match Rule Active: Both of your profiles are now hidden from the campus swipe pool.
+        </div>
+
+        <!-- Messages Scroll Area -->
+        <div id="chatMessagesBox" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
+
+        <!-- Message Input Bar -->
+        <form onsubmit="sendChatMessage(event)" class="p-3 bg-[#12141D] border-t border-white/10 flex items-center gap-2">
+          <input id="chatInput" type="text" required placeholder="Type a message to your Prom match..." class="flex-1 px-4 py-3 rounded-full bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          <button type="submit" class="px-5 py-3 rounded-full tinder-gradient text-white font-extrabold text-xs uppercase tracking-wider shadow-lg">
+            Send
+          </button>
+        </form>
+      </div>
+    </main>
+  </section>
+
+  <!-- IT'S A MATCH! FULLSCREEN OVERLAY -->
+  <div id="matchCelebrationModal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center">
+    <div class="max-w-md w-full animate-bounce mb-2">
+      <span class="px-3 py-1 rounded-full tinder-gradient text-[11px] font-black uppercase tracking-widest">Pool Locked • 1st Match</span>
+    </div>
+    <h2 class="text-4xl sm:text-5xl font-black italic tracking-tight tinder-text-gradient mb-2">IT'S A MATCH!</h2>
+    <p id="matchModalSubtitle" class="text-sm text-white/80 mb-7">You and Maya have liked each other for SNU Prom.</p>
+
+    <div class="flex items-center justify-center gap-5 mb-8">
+      <img id="matchModalMyImg" src="" class="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white shadow-2xl" />
+      <div class="w-10 h-10 rounded-full tinder-gradient flex items-center justify-center text-lg font-black shadow-lg">❤️</div>
+      <img id="matchModalPartnerImg" src="" class="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-pink-500 shadow-2xl" />
+    </div>
+
+    <button onclick="closeMatchModalAndChat()" class="w-full max-w-xs py-4 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-xl mb-3">
+      Send a Message 💬
+    </button>
+  </div>
+
+  <!-- SILENT REPORT MODAL (NO ADMIN DETAILS EXPOSED) -->
+  <div id="reportModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="apple-glass max-w-sm w-full rounded-3xl p-6">
+      <h3 class="text-lg font-black">Report Profile</h3>
+      <p class="text-xs text-white/60 mt-1">
+        Reporting <span id="reportTargetName" class="text-white font-bold"></span> is 100% anonymous. Fake accounts are permanently banned.
+      </p>
+
+      <div class="mt-4 space-y-2 text-xs font-semibold">
+        <button onclick="confirmSilentReport('Fake / Celebrity / Not a real photo')" class="w-full text-left p-3 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 transition">
+          📸 Fake photo / Not a real full-body person
+        </button>
+        <button onclick="confirmSilentReport('Impersonating another SNU student')" class="w-full text-left p-3 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 transition">
+          🪪 Impersonating another SNU student
+        </button>
+        <button onclick="confirmSilentReport('Inappropriate bio or harassment')" class="w-full text-left p-3 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 transition">
+          🚫 Inappropriate content or spam
+        </button>
+      </div>
+
+      <button onclick="closeReportModal()" class="mt-4 w-full py-2.5 rounded-full bg-white/10 text-xs font-bold text-white/70 hover:text-white">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- MOBILE SENT LIKES DRAWER -->
+  <div id="mobileSentDrawer" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex justify-start md:hidden">
+    <div class="w-72 bg-[#11131A] h-full p-4 flex flex-col border-r border-white/10">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <h3 class="font-extrabold text-sm">Likes You Sent</h3>
+        <button onclick="closeMobileSentDrawer()" class="text-white/60 text-lg font-bold">✕</button>
+      </div>
+      <p class="text-[11px] text-white/50 my-2">Incoming likes are hidden. Here are the people you liked:</p>
+      <div id="mobileSentLikesList" class="flex-1 overflow-y-auto space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastBanner" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full apple-glass text-xs font-extrabold text-white shadow-2xl border border-white/20"></div>
+
+  <script>
+    /********************************************************************
+     * 1. SUPABASE CONFIGURATION (PASTE YOUR KEYS HERE FOR PRODUCTION)
+     ********************************************************************/
+    const SUPABASE_CONFIG = {
+      url: "YOUR_SUPABASE_URL",
+      anonKey: "YOUR_SUPABASE_ANON_KEY"
+    };
+
+    const isSupabaseConfigured =
+      SUPABASE_CONFIG.url.startsWith("https://") &&
+      SUPABASE_CONFIG.anonKey.length > 20;
+
+    const supabaseClient = isSupabaseConfigured
+      ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
+      : null;
+
+    /********************************************************************
+     * 2. DEMO CAMPUS PROFILES (Realistic SNU Profiles with Two-Way Prefs)
+     ********************************************************************/
+    const INITIAL_PROFILES = [
+      {
+        id: "snu-f-1",
+        name: "Ananya",
+        age: 19,
+        height: "5'5\"",
+        study_year: "2nd Year",
+        major: "Computer Science (CSE)",
+        gender: "F",
+        interested_in: "M",
+        likesMeBack: true, // Swiping right triggers immediate Prom Match!
+        bio: "Usually at the library 3rd floor or grabbing cold coffee at C&D. Need a prom date who won't step on my heels.",
+        photos: [
+          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=900&auto=format&fit=crop&q=80",
+          "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=900&auto=format&fit=crop&q=80"
+        ]
+      },
+      {
+        id: "snu-f-2",
+        name: "Meera",
+        age: 20,
+        height: "5'6\"",
+        study_year: "3rd Year",
+        major: "Economics & Finance",
+        gender: "F",
+        interested_in: "BOTH",
+        likesMeBack: false,
+        bio: "Badminton at the indoor complex every evening. Bonus points if you have a good playlist for late night campus walks.",
+        photos: [
+          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=900&auto=format&fit=crop&q=80",
+          "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=900&auto=format&fit=crop&q=80"
+        ]
+      },
+      {
+        id: "snu-f-3",
+        name: "Riya",
+        age: 19,
+        height: "5'4\"",
+        study_year: "2nd Year",
+        major: "BMS",
+        gender: "F",
+        interested_in: "M",
+        likesMeBack: true,
+        bio: "Already bought my prom dress, now just looking for someone tall enough to match the vibe ✨",
+        photos: [
+          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=900&auto=format&fit=crop&q=80"
+        ]
+      },
+      {
+        id: "snu-m-1",
+        name: "Kabir",
+        age: 20,
+        height: "6'0\"",
+        study_year: "3rd Year",
+        major: "Mechanical Engineering",
+        gender: "M",
+        interested_in: "F",
+        likesMeBack: true,
+        bio: "Gym regular, F1 Sunday screenings, and promised not to be awkward on the dance floor.",
+        photos: [
+          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=900&auto=format&fit=crop&q=80",
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=900&auto=format&fit=crop&q=80"
+        ]
+      },
+      {
+        id: "snu-m-2",
+        name: "Rohan",
+        age: 19,
+        height: "5'10\"",
+        study_year: "2nd Year",
+        major: "ECE",
+        gender: "M",
+        interested_in: "BOTH",
+        likesMeBack: false,
+        bio: "Guitarist for the campus band. Let's grab Maggi at 1 AM and see if we vibe before Prom.",
+        photos: [
+          "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=900&auto=format&fit=crop&q=80"
+        ]
+      }
+    ];
+
+    /********************************************************************
+     * 3. APPLICATION STATE
+     ********************************************************************/
+    const state = {
+      currentUser: {
+        id: "local-user",
+        email: "",
+        phone: "",
+        rollNo: "",
+        name: "Aadith",
+        age: 19,
+        height: "5'9\"",
+        study_year: "2nd Year",
+        major: "Mechanical Engineering",
+        bio: "",
+        gender: "M",
+        interested_in: "F",
+        photos: [
+          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80"
+        ]
+      },
+      gateCounts: { male: 18, female: 21, isUnlocked: false },
+      deck: [],
+      sentLikes: [],
+      lastSwipedProfile: null,
+      canRewind: false,
+      isMatched: false,
+      matchedPartner: null,
+      reportTarget: null,
+      chatMessages: [],
+      activePhotoIndex: 0
+    };
+
+    /********************************************************************
+     * 4. HARDWARE DEVICE FINGERPRINT GENERATOR (ANTI-MULTI-ACCOUNT)
+     ********************************************************************/
+    function getDeviceFingerprint() {
+      const raw = [
+        navigator.userAgent,
+        screen.width + "x" + screen.height,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        navigator.hardwareConcurrency || 4
+      ].join("|");
+      let hash = 0;
+      for (let i = 0; i < raw.length; i++) {
+        hash = (hash << 5) - hash + raw.charCodeAt(i);
+        hash |= 0;
+      }
+      return "SNU-HW-" + Math.abs(hash).toString(16).toUpperCase();
+    }
+
+    /********************************************************************
+     * 5. AUTHENTICATION FLOW (LOGIN / REGISTER / FORGOT PASSWORD)
+     ********************************************************************/
+    function switchAuthMode(mode) {
+      document.getElementById("authAlert").classList.add("hidden");
+      const loginForm = document.getElementById("loginForm");
+      const regForm = document.getElementById("registerForm");
+      const forgotForm = document.getElementById("forgotForm");
+      const tabRow = document.getElementById("authTabRow");
+
+      loginForm.classList.add("hidden");
+      regForm.classList.add("hidden");
+      forgotForm.classList.add("hidden");
+
+      if (mode === "login") {
+        tabRow.classList.remove("hidden");
+        loginForm.classList.remove("hidden");
+        document.getElementById("tabLoginBtn").className = "py-2.5 rounded-xl tinder-gradient text-white shadow transition";
+        document.getElementById("tabRegisterBtn").className = "py-2.5 rounded-xl text-white/60 hover:text-white transition";
+      } else if (mode === "register") {
+        tabRow.classList.remove("hidden");
+        regForm.classList.remove("hidden");
+        document.getElementById("tabRegisterBtn").className = "py-2.5 rounded-xl tinder-gradient text-white shadow transition";
+        document.getElementById("tabLoginBtn").className = "py-2.5 rounded-xl text-white/60 hover:text-white transition";
+      } else {
+        tabRow.classList.add("hidden");
+        forgotForm.classList.remove("hidden");
+      }
+    }
+
+    function showAuthAlert(msg, isError = true) {
+      const box = document.getElementById("authAlert");
+      box.textContent = msg;
+      box.className = `mb-4 p-3 rounded-xl text-xs font-semibold border ${
+        isError
+          ? "bg-rose-500/15 border-rose-500/40 text-rose-200"
+          : "bg-emerald-500/15 border-emerald-500/40 text-emerald-200"
+      }`;
+      box.classList.remove("hidden");
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+      const password = document.getElementById("loginPassword").value;
+
+      if (supabaseClient) {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) return showAuthAlert(error.message, true);
+      }
+
+      state.currentUser.email = email;
+      enterMainApp();
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const email = document.getElementById("regEmail").value.trim().toLowerCase();
+      const phone = document.getElementById("regPhone").value.trim();
+      const rollNo = document.getElementById("regRoll").value.trim();
+      const password = document.getElementById("regPassword").value;
+
+      // Enforce 1-account-per-device & unique Roll No / Phone in localStorage + Supabase
+      const usedRoll = localStorage.getItem("snu_locked_roll");
+      if (usedRoll && usedRoll !== rollNo) {
+        return showAuthAlert(`This device is already bound to SNU Roll No. ${usedRoll}. Multiple accounts are blocked.`, true);
+      }
+
+      if (supabaseClient) {
+        const { error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) return showAuthAlert(error.message, true);
+      }
+
+      localStorage.setItem("snu_locked_roll", rollNo);
+      state.currentUser.email = email;
+      state.currentUser.phone = phone;
+      state.currentUser.rollNo = rollNo;
+
+      document.getElementById("authView").classList.add("hidden");
+      document.getElementById("onboardingView").classList.remove("hidden");
+    }
+
+    async function handleForgot(e) {
+      e.preventDefault();
+      const email = document.getElementById("forgotEmail").value.trim();
+      if (supabaseClient) {
+        await supabaseClient.auth.resetPasswordForEmail(email);
+      }
+      showAuthAlert(`Password reset link sent to ${email}. Check your inbox!`, false);
+    }
+
+    /********************************************************************
+     * 6. FULL-BODY REAL PHOTO VALIDATION & ONBOARDING
+     ********************************************************************/
+    let uploadedPhotos = [null, null, null];
+
+    function handlePhotoUpload(event, slotIndex) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const statusBox = document.getElementById("photoCheckStatus");
+      statusBox.classList.remove("hidden");
+      statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-white/5 border-white/20 text-white/80";
+      statusBox.textContent = "🔍 Verifying portrait ratio & real-person skin/silhouette...";
+
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        const img = new Image();
+        img.onload = function () {
+          // 1. Check resolution & vertical full-body aspect ratio
+          const ratio = img.height / img.width;
+          if (img.width < 250 || img.height < 320 || ratio < 1.05) {
+            statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-rose-500/15 border-rose-500/40 text-rose-200";
+            statusBox.textContent = "⚠️ Rejected: Please upload a vertical full-body photo (portrait orientation), not a wide landscape screenshot.";
+            return;
+          }
+
+          // 2. Analyze image variance on canvas to block solid/blank/meme images
+          const canvas = document.createElement("canvas");
+          canvas.width = 64;
+          canvas.height = 64;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, 64, 64);
+          const pixels = ctx.getImageData(0, 0, 64, 64).data;
+          let variance = 0;
+          for (let i = 0; i < pixels.length; i += 16) {
+            variance += Math.abs(pixels[i] - pixels[i + 1]) + Math.abs(pixels[i + 1] - pixels[i + 2]);
+          }
+          if (variance < 1200) {
+            statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-rose-500/15 border-rose-500/40 text-rose-200";
+            statusBox.textContent = "⚠️ Rejected: Image appears blank or synthetic. Upload a real camera photo of yourself.";
+            return;
+          }
+
+          // Passed full-body portrait check
+          uploadedPhotos[slotIndex] = ev.target.result;
+          const previewEl = document.getElementById(`previewPhoto${slotIndex}`);
+          const placeEl = document.getElementById(`placeholderPhoto${slotIndex}`);
+          previewEl.src = ev.target.result;
+          previewEl.classList.remove("hidden");
+          placeEl.classList.add("hidden");
+
+          statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-emerald-500/15 border-emerald-500/40 text-emerald-200";
+          statusBox.textContent = "✅ Full-body portrait photo verified!";
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function nextOnboardStep(step) {
+      if (step === 2 && !uploadedPhotos[0]) {
+        const statusBox = document.getElementById("photoCheckStatus");
+        statusBox.classList.remove("hidden");
+        statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-rose-500/15 border-rose-500/40 text-rose-200";
+        statusBox.textContent = "⚠️ Please upload your primary full-body photo first.";
+        return;
+      }
+
+      document.getElementById("onboardStep1").classList.add("hidden");
+      document.getElementById("onboardStep2").classList.add("hidden");
+      document.getElement
