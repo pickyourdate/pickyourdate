@@ -183,25 +183,12 @@
     #coupleChatView form { padding-bottom: calc(0.75rem + 0px); }
     #actionButtonsRow button { flex-shrink: 0; }
 
-    /* Demo bar: never wraps awkwardly on phones */
-    #sandboxBar { gap: 0.5rem; }
-    #sandboxBar > div { min-width: 0; }
-    #sandboxBar > div:first-child { flex: 1 1 auto; overflow: hidden; }
-    #sandboxBar > div:last-child { flex: 0 0 auto; }
-    #sandboxBar button { white-space: nowrap; }
-    #gateBadgeText { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    @media (max-width: 520px) {
-      #sandboxBar > div:first-child > span.text-white\/70 { display: none; }
-      #sandboxBar button { font-size: 11px; padding-left: 0.6rem; padding-right: 0.6rem; }
-    }
-
     /* Small phones */
     @media (max-width: 380px) {
       #actionButtonsRow { gap: 0.6rem; }
     }
     /* Landscape phones / short windows: tighten everything so nothing is cut off */
     @media (max-height: 560px) {
-      #sandboxBar { padding-top: 0.2rem; padding-bottom: 0.2rem; }
       #appView header { height: 2.75rem; }
       #swipeDeckWrapper { padding: 0.5rem 0.75rem; }
       #actionButtonsRow { padding-top: 0.4rem; }
@@ -217,30 +204,14 @@
 </head>
 <body class="flex flex-col">
 
-  <!-- TOP DEMO / SANDBOX BAR (Remove or hide in production once 50 users join) -->
-  <div id="sandboxBar" class="w-full bg-[#12131A] border-b border-white/10 px-3 py-1.5 flex items-center justify-between text-xs z-50">
-    <div class="flex items-center gap-2">
-      <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-      <span class="text-white/70 font-medium">SNU Prom Mode:</span>
-      <span id="gateBadgeText" class="text-pink-400 font-semibold">Launch Gate Active (39/50)</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <button onclick="toggleGateLock()" class="px-2.5 py-1 rounded-full apple-glass-pill hover:bg-white/15 text-white/90 font-semibold transition">
-        Toggle 25M/25F Gate
-      </button>
-      <button onclick="enterInstantDemo()" class="px-2.5 py-1 rounded-full tinder-gradient text-white font-bold shadow transition hover:opacity-90">
-        Instant Demo
-      </button>
-    </div>
-  </div>
-
   <!-- 1. AUTHENTICATION VIEW (SIGN IN / CREATE ACCOUNT / FORGOT PASSWORD) -->
   <section id="authView" class="flex-1 flex p-4 relative overflow-y-auto">
     <!-- Ambient background glow -->
     <div class="absolute -top-28 -left-28 w-96 h-96 rounded-full bg-pink-600/20 blur-3xl pointer-events-none"></div>
     <div class="absolute -bottom-28 -right-28 w-96 h-96 rounded-full bg-orange-500/20 blur-3xl pointer-events-none"></div>
 
-    <div class="apple-glass w-full max-w-md rounded-3xl p-7 sm:p-8 relative z-10 m-auto">
+    <div class="w-full max-w-md relative z-10 m-auto flex flex-col items-center gap-4">
+    <div class="apple-glass w-full rounded-3xl p-7 sm:p-8">
       <!-- Brand Header -->
       <div class="flex flex-col items-center text-center mb-6">
         <div class="w-14 h-14 rounded-2xl tinder-gradient flex items-center justify-center shadow-lg shadow-pink-500/30 mb-3">
@@ -321,6 +292,11 @@
           ← Back to Sign In
         </button>
       </form>
+    </div>
+
+    <button type="button" onclick="enterInstantDemo()" class="px-5 py-2.5 rounded-full tinder-gradient text-white text-xs font-bold shadow-lg shadow-pink-500/25 transition hover:opacity-90 active:scale-95">
+      Instant Demo
+    </button>
     </div>
   </section>
 
@@ -1269,8 +1245,8 @@
       $("gateFemaleBar").style.width = Math.min(100, (g.female / 25) * 100) + "%";
       $("gateMaleCount").textContent = Math.min(g.male, 25) + " / 25";
       $("gateMaleBar").style.width = Math.min(100, (g.male / 25) * 100) + "%";
-      $("gateBadgeText").textContent =
-        (g.isUnlocked ? "Launch Gate Open (" : "Launch Gate Active (") + total + "/50)";
+      const badge = $("gateBadgeText");
+      if (badge) badge.textContent = (g.isUnlocked ? "Launch Gate Open (" : "Launch Gate Active (") + total + "/50)";
     }
 
     function applyGateView() {
