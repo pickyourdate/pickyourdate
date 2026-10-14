@@ -48,7 +48,6 @@
       background-color: #090A0F;
       color: #FFFFFF;
       margin: 0;
-      /* Locked to the *visible* viewport (JS keeps --app-h in sync with keyboard / toolbars) */
       position: fixed;
       top: 0; left: 0; right: 0;
       width: 100%;
@@ -73,7 +72,6 @@
       background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    /* Apple Liquid Glass UI (with solid fallback when blur is unsupported) */
     .apple-glass {
       background: rgba(24, 26, 34, 0.9);
       border: 1px solid rgba(255, 255, 255, 0.11);
@@ -105,7 +103,7 @@
       inset: 0;
       border-radius: 20px;
       overflow: hidden;
-      touch-action: none;                 /* lets Pointer Events own the gesture on touch */
+      touch-action: none;
       -webkit-user-select: none;
       user-select: none;
       will-change: transform;
@@ -153,7 +151,7 @@
     input[type="number"]::-webkit-outer-spin-button,
     input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     @media (pointer: coarse) {
-      input, textarea, select { font-size: 16px !important; }  /* prevents iOS focus-zoom */
+      input, textarea, select { font-size: 16px !important; }
     }
     input:-webkit-autofill {
       -webkit-text-fill-color: #fff;
@@ -170,7 +168,7 @@
     /* ---- Layout fixes ---- */
     .w-15 { width: 3.75rem; } .h-15 { height: 3.75rem; }
     #authView { overflow-x: hidden; }
-    #authView > .blur-3xl { position: fixed; }          /* glows no longer create scroll overflow */
+    #authView > .blur-3xl { position: fixed; }
     #toastBanner {
       bottom: calc(1.5rem + var(--sab));
       max-width: calc(100% - 2rem);
@@ -183,11 +181,9 @@
     #coupleChatView form { padding-bottom: calc(0.75rem + 0px); }
     #actionButtonsRow button { flex-shrink: 0; }
 
-    /* Small phones */
     @media (max-width: 380px) {
       #actionButtonsRow { gap: 0.6rem; }
     }
-    /* Landscape phones / short windows: tighten everything so nothing is cut off */
     @media (max-height: 560px) {
       #appView header { height: 2.75rem; }
       #swipeDeckWrapper { padding: 0.5rem 0.75rem; }
@@ -204,99 +200,126 @@
 </head>
 <body class="flex flex-col">
 
-  <!-- 1. AUTHENTICATION VIEW (SIGN IN / CREATE ACCOUNT / FORGOT PASSWORD) -->
+  <!-- 1. AUTHENTICATION VIEW (SIGN IN / CREATE ACCOUNT / 6-DIGIT OTP / FORGOT PASSWORD) -->
   <section id="authView" class="flex-1 flex p-4 relative overflow-y-auto">
     <!-- Ambient background glow -->
     <div class="absolute -top-28 -left-28 w-96 h-96 rounded-full bg-pink-600/20 blur-3xl pointer-events-none"></div>
     <div class="absolute -bottom-28 -right-28 w-96 h-96 rounded-full bg-orange-500/20 blur-3xl pointer-events-none"></div>
 
     <div class="w-full max-w-md relative z-10 m-auto flex flex-col items-center gap-4">
-    <div class="apple-glass w-full rounded-3xl p-7 sm:p-8">
-      <!-- Brand Header -->
-      <div class="flex flex-col items-center text-center mb-6">
-        <div class="w-14 h-14 rounded-2xl tinder-gradient flex items-center justify-center shadow-lg shadow-pink-500/30 mb-3">
-          <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M16.56 11.4C16.29 7.82 14.1 4.88 11.45 3.12c-.34-.23-.8-.01-.82.4-.09 1.72-.71 3.4-1.92 4.54-.52.49-1.13.87-1.76 1.24-.22.13-.49-.04-.47-.29.06-.86-.05-1.76-.38-2.56-.17-.4-.69-.48-.97-.15C3.52 8.21 2.7 10.74 3.07 13.4c.53 3.82 3.69 6.99 7.52 7.5 4.89.66 9.13-2.92 9.4-7.61.07-1.22-.16-2.4-.63-3.46-.18-.41-.73-.43-.96-.05-.37.62-.89 1.15-1.51 1.52-.21.12-.31.02-.33-.1z"/>
-          </svg>
-        </div>
-        <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Pick Ur Date</h1>
-        <p class="text-xs sm:text-sm text-white/60 mt-1">Exclusive SNU Prom Matchmaker • 1 Account Per Student</p>
-      </div>
-
-      <!-- Auth Tabs -->
-      <div id="authTabRow" class="grid grid-cols-2 p-1 rounded-2xl bg-black/40 border border-white/10 mb-6 text-xs font-bold">
-        <button id="tabLoginBtn" onclick="switchAuthMode('login')" class="py-2.5 rounded-xl tinder-gradient text-white shadow transition">Sign In</button>
-        <button id="tabRegisterBtn" onclick="switchAuthMode('register')" class="py-2.5 rounded-xl text-white/60 hover:text-white transition">Create Account</button>
-      </div>
-
-      <!-- Error / Info Banner -->
-      <div id="authAlert" class="hidden mb-4 p-3 rounded-xl text-xs font-semibold border"></div>
-
-      <!-- SIGN IN FORM -->
-      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">Email Address</label>
-          <input id="loginEmail" type="email" required placeholder="you@gmail.com" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
-        </div>
-        <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-white/60">Password</label>
-            <button type="button" onclick="switchAuthMode('forgot')" class="text-xs text-pink-400 hover:underline font-semibold">Forgot Password?</button>
+      <div class="apple-glass w-full rounded-3xl p-7 sm:p-8">
+        <!-- Brand Header -->
+        <div class="flex flex-col items-center text-center mb-6">
+          <div class="w-14 h-14 rounded-2xl tinder-gradient flex items-center justify-center shadow-lg shadow-pink-500/30 mb-3">
+            <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M16.56 11.4C16.29 7.82 14.1 4.88 11.45 3.12c-.34-.23-.8-.01-.82.4-.09 1.72-.71 3.4-1.92 4.54-.52.49-1.13.87-1.76 1.24-.22.13-.49-.04-.47-.29.06-.86-.05-1.76-.38-2.56-.17-.4-.69-.48-.97-.15C3.52 8.21 2.7 10.74 3.07 13.4c.53 3.82 3.69 6.99 7.52 7.5 4.89.66 9.13-2.92 9.4-7.61.07-1.22-.16-2.4-.63-3.46-.18-.41-.73-.43-.96-.05-.37.62-.89 1.15-1.51 1.52-.21.12-.31.02-.33-.1z"/>
+            </svg>
           </div>
-          <input id="loginPassword" type="password" required minlength="6" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Pick Ur Date</h1>
+          <p class="text-xs sm:text-sm text-white/60 mt-1">Exclusive SNU Prom Matchmaker • 1 Account Per Student</p>
         </div>
-        <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg shadow-pink-500/25 hover:opacity-95 active:scale-[0.99] transition">
-          Log In
-        </button>
-      </form>
 
-      <!-- REGISTER FORM (Email + Password + Unique +91 Phone + Unique SNU Roll No) -->
-      <form id="registerForm" onsubmit="handleRegister(event)" class="hidden space-y-3.5">
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Personal Email</label>
-          <input id="regEmail" type="email" required placeholder="yourname@gmail.com" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+        <!-- Auth Tabs -->
+        <div id="authTabRow" class="grid grid-cols-2 p-1 rounded-2xl bg-black/40 border border-white/10 mb-6 text-xs font-bold">
+          <button id="tabLoginBtn" onclick="switchAuthMode('login')" class="py-2.5 rounded-xl tinder-gradient text-white shadow transition">Sign In</button>
+          <button id="tabRegisterBtn" onclick="switchAuthMode('register')" class="py-2.5 rounded-xl text-white/60 hover:text-white transition">Create Account</button>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+        <!-- Error / Info Banner -->
+        <div id="authAlert" class="hidden mb-4 p-3 rounded-xl text-xs font-semibold border"></div>
+
+        <!-- SIGN IN FORM -->
+        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Mobile (+91)</label>
-            <input id="regPhone" type="tel" required pattern="^[6-9][0-9]{9}$" maxlength="10" placeholder="9876543210" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">Email Address</label>
+            <input id="loginEmail" type="email" required placeholder="you@gmail.com" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
           </div>
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">SNU Roll No.</label>
-            <input id="regRoll" type="text" required pattern="^[0-9]{8,12}$" maxlength="12" placeholder="2410110452" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-bold uppercase tracking-wider text-white/60">Password</label>
+              <button type="button" onclick="switchAuthMode('forgot')" class="text-xs text-pink-400 hover:underline font-semibold">Forgot Password?</button>
+            </div>
+            <input id="loginPassword" type="password" required minlength="6" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
           </div>
-        </div>
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Set Password</label>
-          <input id="regPassword" type="password" required minlength="6" placeholder="Min. 6 characters" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
-        </div>
-        <p class="text-[11px] text-white/50 leading-relaxed">
-          🔒 Your phone number, SNU Roll Number, and device hardware ID are permanently bound to 1 account. Fake profiles are banned on report.
-        </p>
-        <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg shadow-pink-500/25 hover:opacity-95 active:scale-[0.99] transition">
-          Continue to Profile Setup
-        </button>
-      </form>
+          <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg shadow-pink-500/25 hover:opacity-95 active:scale-[0.99] transition">
+            Log In
+          </button>
+        </form>
 
-      <!-- FORGOT PASSWORD FORM -->
-      <form id="forgotForm" onsubmit="handleForgot(event)" class="hidden space-y-4">
-        <p class="text-xs text-white/70">Enter your registered email address and we'll send you a password reset link.</p>
-        <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">Registered Email</label>
-          <input id="forgotEmail" type="email" required placeholder="you@gmail.com" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg">
-          Send Reset Link
-        </button>
-        <button type="button" onclick="switchAuthMode('login')" class="w-full py-2 text-xs text-white/60 hover:text-white font-semibold">
-          ← Back to Sign In
-        </button>
-      </form>
-    </div>
+        <!-- REGISTER FORM (Email + Password + Unique +91 Phone + Unique SNU Roll No) -->
+        <form id="registerForm" onsubmit="handleRegister(event)" class="hidden space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Personal Email</label>
+            <input id="regEmail" type="email" required placeholder="yourname@gmail.com" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Mobile (+91)</label>
+              <input id="regPhone" type="tel" required pattern="^[6-9][0-9]{9}$" maxlength="10" placeholder="9876543210" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">SNU Roll No.</label>
+              <input id="regRoll" type="text" required pattern="^[0-9]{8,12}$" maxlength="12" placeholder="2410110452" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1">Set Password</label>
+            <input id="regPassword" type="password" required minlength="6" placeholder="Min. 6 characters" class="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          </div>
+          <p class="text-[11px] text-white/50 leading-relaxed">
+            🔒 Your phone number, SNU Roll Number, and device hardware ID are permanently bound to 1 account. Fake profiles are banned on report.
+          </p>
+          <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg shadow-pink-500/25 hover:opacity-95 active:scale-[0.99] transition">
+            Send 6-Digit Verification OTP
+          </button>
+        </form>
 
-    <button type="button" onclick="enterInstantDemo()" class="px-5 py-2.5 rounded-full tinder-gradient text-white text-xs font-bold shadow-lg shadow-pink-500/25 transition hover:opacity-90 active:scale-95">
-      Instant Demo
-    </button>
+        <!-- FORGOT PASSWORD FORM (SEND CODE + RESET PASSWORD) -->
+        <form id="forgotForm" onsubmit="handleForgot(event)" class="hidden space-y-4">
+          <p class="text-xs text-white/70">Enter your registered email to receive a 6-digit reset code.</p>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">Registered Email</label>
+            <input id="forgotEmail" type="email" required placeholder="you@gmail.com" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+          </div>
+          <div id="forgotOtpBox" class="hidden space-y-3">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">6-Digit Reset OTP</label>
+              <input id="forgotOtpCode" type="text" maxlength="6" placeholder="123456" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-center tracking-[0.4em] font-black text-lg text-white focus:outline-none focus:border-pink-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">New Password</label>
+              <input id="forgotNewPassword" type="password" minlength="6" placeholder="New password (min 6 chars)" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-500" />
+            </div>
+          </div>
+          <button id="forgotSubmitBtn" type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg">
+            Send 6-Digit Reset Code
+          </button>
+          <button type="button" onclick="switchAuthMode('login')" class="w-full py-2 text-xs text-white/60 hover:text-white font-semibold">
+            ← Back to Sign In
+          </button>
+        </form>
+
+        <!-- 6-DIGIT SIGNUP OTP VERIFICATION FORM -->
+        <form id="otpVerifyForm" onsubmit="handleVerifySignupOtp(event)" class="hidden space-y-4">
+          <div class="p-3 rounded-xl bg-pink-500/10 border border-pink-500/30 text-xs text-pink-200">
+            📩 We sent a 6-digit verification code to <strong id="otpTargetEmail"></strong>. Check your inbox (and Spam folder).
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/60 mb-1.5">Enter 6-Digit Email OTP</label>
+            <input id="signupOtpInput" type="text" required pattern="^[0-9]{6}$" maxlength="6" placeholder="000000" class="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/15 text-center tracking-[0.5em] font-black text-xl text-white focus:outline-none focus:border-pink-500" />
+          </div>
+          <button type="submit" class="w-full py-3.5 rounded-full tinder-gradient text-white font-extrabold text-sm tracking-wide shadow-lg">
+            Verify & Continue →
+          </button>
+          <button type="button" onclick="switchAuthMode('register')" class="w-full py-2 text-xs text-white/60 hover:text-white font-semibold">
+            ← Change Email / Details
+          </button>
+        </form>
+      </div>
+
+      <button type="button" onclick="enterInstantDemo()" class="px-5 py-2.5 rounded-full tinder-gradient text-white text-xs font-bold shadow-lg shadow-pink-500/25 transition hover:opacity-90 active:scale-95">
+        Instant Demo
+      </button>
     </div>
   </section>
 
@@ -755,12 +778,13 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toastBanner" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full apple-glass text-xs font-extrabold text-white shadow-2xl border border-white/20"></div>
 
-<script>    /********************************************************************
-     * 1. SUPABASE CONFIGURATION (PASTE YOUR KEYS HERE FOR PRODUCTION)
+<script>
+    /********************************************************************
+     * 1. SUPABASE CONFIGURATION (LIVE CREDENTIALS WIRED)
      ********************************************************************/
     const SUPABASE_CONFIG = {
-      url: "YOUR_SUPABASE_URL",
-      anonKey: "YOUR_SUPABASE_ANON_KEY"
+      url: "https://ponimkdnmhlluxbgsedd.supabase.co",
+      anonKey: "sb_publishable_u8Ug05xPWtNo00BhdMsN9g_5wUvtr1D"
     };
 
     const isSupabaseConfigured =
@@ -784,7 +808,7 @@
         major: "Computer Science (CSE)",
         gender: "F",
         interested_in: "M",
-        likesMeBack: true, // Swiping right triggers immediate Prom Match!
+        likesMeBack: true,
         bio: "Usually at the library 3rd floor or grabbing cold coffee at C&D. Need a prom date who won't step on my heels.",
         photos: [
           "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=900&auto=format&fit=crop&q=80",
@@ -907,18 +931,22 @@
     }
 
     /********************************************************************
-     * 5. AUTHENTICATION FLOW (LOGIN / REGISTER / FORGOT PASSWORD)
+     * 5. AUTHENTICATION FLOW (LOGIN / REGISTER / 6-DIGIT OTP / FORGOT)
      ********************************************************************/
+    let forgotStage = "send"; // "send" or "verify"
+
     function switchAuthMode(mode) {
       document.getElementById("authAlert").classList.add("hidden");
       const loginForm = document.getElementById("loginForm");
       const regForm = document.getElementById("registerForm");
       const forgotForm = document.getElementById("forgotForm");
+      const otpForm = document.getElementById("otpVerifyForm");
       const tabRow = document.getElementById("authTabRow");
 
       loginForm.classList.add("hidden");
       regForm.classList.add("hidden");
       forgotForm.classList.add("hidden");
+      if (otpForm) otpForm.classList.add("hidden");
 
       if (mode === "login") {
         tabRow.classList.remove("hidden");
@@ -930,7 +958,13 @@
         regForm.classList.remove("hidden");
         document.getElementById("tabRegisterBtn").className = "py-2.5 rounded-xl tinder-gradient text-white shadow transition";
         document.getElementById("tabLoginBtn").className = "py-2.5 rounded-xl text-white/60 hover:text-white transition";
+      } else if (mode === "otp") {
+        tabRow.classList.add("hidden");
+        otpForm.classList.remove("hidden");
       } else {
+        forgotStage = "send";
+        document.getElementById("forgotOtpBox").classList.add("hidden");
+        document.getElementById("forgotSubmitBtn").textContent = "Send 6-Digit Reset Code";
         tabRow.classList.add("hidden");
         forgotForm.classList.remove("hidden");
       }
@@ -953,7 +987,7 @@
       const password = document.getElementById("loginPassword").value;
 
       if (supabaseClient) {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) return showAuthAlert(error.message, true);
       }
 
@@ -968,7 +1002,6 @@
       const rollNo = document.getElementById("regRoll").value.trim();
       const password = document.getElementById("regPassword").value;
 
-      // Enforce 1-account-per-device & unique Roll No / Phone in localStorage + Supabase
       let usedRoll = null;
       try { usedRoll = localStorage.getItem("snu_locked_roll"); } catch (_) {}
       if (usedRoll && usedRoll !== rollNo) {
@@ -976,26 +1009,89 @@
       }
 
       if (supabaseClient) {
-        const { error } = await supabaseClient.auth.signUp({ email, password });
+        // 1. Pre-check if Phone, Roll No, or Device Fingerprint is already registered
+        const { data: check } = await supabaseClient.rpc("check_registration_allowed", {
+          check_phone: phone,
+          check_roll: rollNo,
+          check_fp: getDeviceFingerprint()
+        });
+        if (check && check.allowed === false) {
+          return showAuthAlert(check.reason, true);
+        }
+
+        // 2. Trigger Supabase SignUp (Sends 6-digit OTP email via Brevo)
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
         if (error) return showAuthAlert(error.message, true);
+
+        state.currentUser.email = email;
+        state.currentUser.phone = phone;
+        state.currentUser.rollNo = rollNo;
+
+        // If Supabase requires OTP confirmation, show the 6-digit OTP screen
+        if (!data.session) {
+          document.getElementById("otpTargetEmail").textContent = email;
+          switchAuthMode("otp");
+          return;
+        }
       }
 
       try { localStorage.setItem("snu_locked_roll", rollNo); } catch (_) {}
-      state.currentUser.email = email;
-      state.currentUser.phone = phone;
-      state.currentUser.rollNo = rollNo;
+      document.getElementById("authView").classList.add("hidden");
+      document.getElementById("onboardingView").classList.remove("hidden");
+    }
 
+    async function handleVerifySignupOtp(e) {
+      e.preventDefault();
+      const token = document.getElementById("signupOtpInput").value.trim();
+      const email = state.currentUser.email;
+
+      if (supabaseClient) {
+        const { error } = await supabaseClient.auth.verifyOtp({
+          email,
+          token,
+          type: "signup"
+        });
+        if (error) return showAuthAlert("Invalid or expired 6-digit code. Try again.", true);
+      }
+
+      try { localStorage.setItem("snu_locked_roll", state.currentUser.rollNo); } catch (_) {}
       document.getElementById("authView").classList.add("hidden");
       document.getElementById("onboardingView").classList.remove("hidden");
     }
 
     async function handleForgot(e) {
       e.preventDefault();
-      const email = document.getElementById("forgotEmail").value.trim();
-      if (supabaseClient) {
-        await supabaseClient.auth.resetPasswordForEmail(email);
+      const email = document.getElementById("forgotEmail").value.trim().toLowerCase();
+
+      if (forgotStage === "send") {
+        if (supabaseClient) {
+          const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+          if (error) return showAuthAlert(error.message, true);
+        }
+        forgotStage = "verify";
+        document.getElementById("forgotOtpBox").classList.remove("hidden");
+        document.getElementById("forgotSubmitBtn").textContent = "Verify Code & Update Password";
+        showAuthAlert(`6-digit reset code sent to ${email}. Enter it below!`, false);
+      } else {
+        const token = document.getElementById("forgotOtpCode").value.trim();
+        const newPassword = document.getElementById("forgotNewPassword").value;
+        if (!token || newPassword.length < 6) {
+          return showAuthAlert("Enter the 6-digit code and a password of at least 6 characters.", true);
+        }
+        if (supabaseClient) {
+          const { error: otpErr } = await supabaseClient.auth.verifyOtp({
+            email,
+            token,
+            type: "recovery"
+          });
+          if (otpErr) return showAuthAlert("Invalid reset code: " + otpErr.message, true);
+
+          const { error: passErr } = await supabaseClient.auth.updateUser({ password: newPassword });
+          if (passErr) return showAuthAlert(passErr.message, true);
+        }
+        showAuthAlert("Password updated! You can now log in.", false);
+        setTimeout(() => switchAuthMode("login"), 1200);
       }
-      showAuthAlert(`Password reset link sent to ${email}. Check your inbox!`, false);
     }
 
     /********************************************************************
@@ -1020,7 +1116,6 @@
       reader.onload = function (ev) {
         const img = new Image();
         img.onload = function () {
-          // 1. Check resolution & vertical full-body aspect ratio
           const ratio = img.height / img.width;
           if (img.width < 250 || img.height < 320 || ratio < 1.05) {
             statusBox.className = "p-3 rounded-xl text-xs font-semibold border bg-rose-500/15 border-rose-500/40 text-rose-200";
@@ -1028,7 +1123,6 @@
             return;
           }
 
-          // 2. Analyze image variance on canvas to block solid/blank/meme images
           const canvas = document.createElement("canvas");
           canvas.width = 64;
           canvas.height = 64;
@@ -1045,11 +1139,18 @@
             return;
           }
 
-          // Passed full-body portrait check
-          uploadedPhotos[slotIndex] = ev.target.result;
+          const outCanvas = document.createElement("canvas");
+          const maxW = 900;
+          const scale = Math.min(1, maxW / img.width);
+          outCanvas.width = Math.round(img.width * scale);
+          outCanvas.height = Math.round(img.height * scale);
+          outCanvas.getContext("2d").drawImage(img, 0, 0, outCanvas.width, outCanvas.height);
+          const compressedDataUrl = outCanvas.toDataURL("image/jpeg", 0.82);
+
+          uploadedPhotos[slotIndex] = compressedDataUrl;
           const previewEl = document.getElementById(`previewPhoto${slotIndex}`);
           const placeEl = document.getElementById(`placeholderPhoto${slotIndex}`);
-          previewEl.src = ev.target.result;
+          previewEl.src = compressedDataUrl;
           previewEl.classList.remove("hidden");
           placeEl.classList.add("hidden");
 
@@ -1063,7 +1164,7 @@
         img.src = ev.target.result;
       };
       reader.readAsDataURL(file);
-      event.target.value = ""; // allow re-picking the same file
+      event.target.value = "";
     }
 
     /********************************************************************
@@ -1077,7 +1178,6 @@
     const prefersReducedMotion = () =>
       window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // Extra runtime state (kept separate from the original state shape)
     state.seen = new Set();
     state.busy = false;
     state.joinedGender = null;
@@ -1096,8 +1196,6 @@
 
     /********************************************************************
      * 8. VIEWPORT / ORIENTATION ENGINE (iOS, Android, Windows, macOS)
-     *    - Tracks the *visual* viewport so the on-screen keyboard, iOS
-     *      Safari toolbars and Android Chrome URL bar never hide the UI.
      ********************************************************************/
     function setAppHeight() {
       const vv = window.visualViewport;
@@ -1116,11 +1214,9 @@
       window.visualViewport.addEventListener("resize", setAppHeight);
       window.visualViewport.addEventListener("scroll", setAppHeight);
     }
-    // Stop iOS pinch-zoom / double-tap zoom from breaking the layout
     ["gesturestart", "gesturechange", "gestureend"].forEach((ev) =>
       document.addEventListener(ev, (e) => e.preventDefault())
     );
-    // Keep a focused input visible when the keyboard opens
     document.addEventListener("focusin", (e) => {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) {
         setTimeout(() => {
@@ -1130,7 +1226,6 @@
       }
     });
 
-    // Input hints so phones show the right keyboard + password managers work
     (function setInputHints() {
       const hints = {
         loginEmail: { autocomplete: "email", inputmode: "email", autocapitalize: "none", autocorrect: "off", spellcheck: "false" },
@@ -1140,6 +1235,8 @@
         regRoll: { autocomplete: "off", inputmode: "numeric" },
         regPassword: { autocomplete: "new-password", autocapitalize: "none" },
         forgotEmail: { autocomplete: "email", inputmode: "email", autocapitalize: "none", autocorrect: "off", spellcheck: "false" },
+        signupOtpInput: { autocomplete: "one-time-code", inputmode: "numeric" },
+        forgotOtpCode: { autocomplete: "one-time-code", inputmode: "numeric" },
         obName: { autocomplete: "given-name", autocapitalize: "words" },
         obAge: { inputmode: "numeric" },
         chatInput: { autocomplete: "off", enterkeyhint: "send", autocapitalize: "sentences" }
@@ -1278,6 +1375,8 @@
 
     function unlockDemoPoolNow() {
       setGateUnlocked(true);
+      if (!state.deck.length) buildDeck();
+      renderDeck();
       showToast("Demo deck unlocked 🔥");
     }
 
@@ -1285,7 +1384,15 @@
       state.gateCounts.isUnlocked = true;
       state.gateCounts.male = Math.max(state.gateCounts.male, 25);
       state.gateCounts.female = Math.max(state.gateCounts.female, 25);
-      enterMainApp();
+      buildDeck();
+      $("authView").classList.add("hidden");
+      $("onboardingView").classList.add("hidden");
+      $("appView").classList.remove("hidden");
+      updateGateUI();
+      updateSentUI();
+      updateMatchPanel();
+      applyGateView();
+      setAppHeight();
     }
 
     /********************************************************************
@@ -1310,7 +1417,7 @@
     }
 
     /********************************************************************
-     * 12. DECK BUILDING + CARD RENDERING
+     * 12. DECK BUILDING + CARD RENDERING (WITH CARD REPORT BUTTON)
      ********************************************************************/
     function buildDeck() {
       if (state.isMatched) { state.deck = []; return; }
@@ -1339,6 +1446,7 @@
         <img class="card-photo absolute inset-0 w-full h-full object-cover pointer-events-none" src="${esc(p.photos[0])}" alt="${esc(p.name)}" draggable="false" decoding="async" />
         <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/45 to-transparent pointer-events-none"></div>
         <div class="card-bars absolute top-2.5 inset-x-3 flex gap-1.5 pointer-events-none ${p.photos.length > 1 ? "" : "hidden"}">${bars}</div>
+        <button type="button" class="card-report-btn absolute top-6 right-3 z-20 px-2.5 py-1 rounded-full bg-black/45 hover:bg-rose-500/30 border border-white/15 text-[11px] font-bold text-white/80 backdrop-blur-md transition" title="Report Fake Profile">🚩 Report</button>
         <div class="absolute inset-x-0 bottom-0 pt-28 pb-5 px-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none">
           <div class="flex items-baseline gap-2">
             <h3 class="text-3xl font-black tracking-tight">${esc(p.name)}</h3>
@@ -1352,6 +1460,13 @@
         <div class="absolute inset-x-0 top-[38%] flex justify-center pointer-events-none">
           <div class="stamp-super stamp-el super-stamp px-3 py-0.5 rounded-lg text-2xl font-black tracking-widest whitespace-nowrap" style="opacity:0">SUPER LIKE</div>
         </div>`;
+
+      const reportBtn = el.querySelector(".card-report-btn");
+      reportBtn.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+      reportBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        openReportModal(p);
+      });
 
       const img = el.querySelector(".card-photo");
       img.addEventListener("error", () => { img.style.visibility = "hidden"; });
@@ -1409,13 +1524,12 @@
 
       const off = state.deck.length === 0;
       $("actionButtonsRow").querySelectorAll("button").forEach((b, idx) => {
-        if (idx === 0) return; // rewind handles its own state
+        if (idx === 0) return;
         b.style.opacity = off ? "0.35" : "";
         b.style.pointerEvents = off ? "none" : "";
       });
 
-      // Warm the cache for the next cards' first photo
-      state.deck.slice(0, 4).forEach((p) => { const im = new Image(); im.src = p.photos[0]; });
+      state.deck.slice(0, 4).forEach((p) => { if (p.photos?.[0]) { const im = new Image(); im.src = p.photos[0]; } });
     }
 
     /********************************************************************
@@ -1442,7 +1556,7 @@
         el.style.transform = `translate3d(${s.dx}px,${s.dy}px,0) rotate(${rot}deg)`;
         setStamps(el, s.dx, s.dy, s.w, s.h);
         const progress = clamp(Math.max(Math.abs(s.dx) / (s.w * 0.5), -s.dy / (s.h * 0.4)), 0, 1);
-        layoutStack(progress, true); // never touch the card being dragged
+        layoutStack(progress, true);
       };
 
       el.addEventListener("pointerdown", (e) => {
@@ -1545,9 +1659,8 @@
         matched = !!p.likesMeBack && !state.isMatched;
       }
       state.canRewind = !matched;
-      if (matched) state.deck = []; // First Match Rule: pool locks
+      if (matched) state.deck = [];
 
-      // Fly-out animation
       const fast = prefersReducedMotion();
       const ms = fast ? 1 : 420;
       el.querySelectorAll(".stamp-el").forEach((st) => { st.style.opacity = 0; });
@@ -1693,12 +1806,14 @@
     function triggerMatch(p) {
       state.isMatched = true;
       state.matchedPartner = p;
-      state.chatMessages = [{ from: "them", text: "Hey! 👋 Looks like we're prom dates now." }];
+      if (!state.chatMessages.length) {
+        state.chatMessages = [{ from: "them", text: "Hey! 👋 Looks like we're prom dates now." }];
+      }
       replyCursor = 0;
 
       $("matchModalSubtitle").textContent = "You and " + p.name + " have liked each other for SNU Prom.";
-      $("matchModalMyImg").src = state.currentUser.photos[0];
-      $("matchModalPartnerImg").src = p.photos[0];
+      $("matchModalMyImg").src = state.currentUser.photos?.[0] || "";
+      $("matchModalPartnerImg").src = p.photos?.[0] || "";
       $("matchCelebrationModal").classList.remove("hidden");
       $("chatUnreadDot").classList.remove("hidden");
       updateMatchPanel();
@@ -1715,7 +1830,7 @@
       $("noMatchYetCard").classList.toggle("hidden", state.isMatched);
       $("activeMatchCard").classList.toggle("hidden", !state.isMatched);
       if (state.isMatched && p) {
-        $("sideMatchPhoto").src = p.photos[0];
+        $("sideMatchPhoto").src = p.photos?.[0] || "";
         $("sideMatchName").textContent = p.name;
         const last = state.chatMessages[state.chatMessages.length - 1];
         $("sideMatchPreview").textContent = last ? last.text : "Tap to open your Prom Chat 💬";
@@ -1728,7 +1843,7 @@
         return;
       }
       const p = state.matchedPartner;
-      $("chatPartnerAvatar").src = p.photos[0];
+      $("chatPartnerAvatar").src = p.photos?.[0] || "";
       $("chatPartnerName").textContent = p.name;
       $("chatPartnerMeta").textContent = p.height + " • " + p.study_year + " • " + p.major;
       $("chatUnreadDot").classList.add("hidden");
@@ -1863,6 +1978,243 @@
     updateSentUI();
     selectGender("M");
     selectPreference("F");
-  </script>
+
+    /********************************************************************
+     * 19. LIVE SUPABASE PRODUCTION BRIDGE (AUTO-ACTIVATES WITH YOUR KEYS)
+     ********************************************************************/
+    if (supabaseClient) {
+      let realtimeChannel = null;
+
+      // 1. Save Onboarding Profile + Hidden Gender/Preferences to Supabase
+      completeOnboarding = async function () {
+        const name = $("obName").value.trim();
+        if (!name) { nextOnboardStep(2); return showToast("Please enter your first name"); }
+
+        const { data: authData } = await supabaseClient.auth.getUser();
+        if (!authData?.user) return showToast("Please verify your email OTP or log in first.");
+
+        const u = state.currentUser;
+        u.id = authData.user.id;
+        u.name = name;
+        u.age = clamp(parseInt($("obAge").value, 10) || 19, 17, 25);
+        u.height = $("obHeight").value;
+        u.study_year = $("obYear").value;
+        u.major = $("obMajor").value.trim() || "SNU Student";
+        u.bio = $("obBio").value.trim();
+        u.gender = chosenGender;
+        u.interested_in = chosenPref;
+        const photos = uploadedPhotos.filter(Boolean);
+        if (photos.length) u.photos = photos;
+
+        const { error: profErr } = await supabaseClient.from("profiles").upsert({
+          id: u.id,
+          email: u.email || authData.user.email,
+          phone_number: u.phone || "9999999999",
+          snu_roll_no: u.rollNo || String(Date.now()).slice(-10),
+          device_fingerprint: getDeviceFingerprint(),
+          name: u.name,
+          age: u.age,
+          height: u.height,
+          study_year: u.study_year,
+          major: u.major,
+          bio: u.bio,
+          photos: u.photos,
+          onboarding_complete: true
+        });
+        if (profErr) return showToast(profErr.message);
+
+        await supabaseClient.from("user_private_prefs").upsert({
+          user_id: u.id,
+          gender: u.gender,
+          interested_in: u.interested_in
+        });
+
+        await enterMainApp();
+      };
+
+      // 2. Load User Profile, 25M/25F Gate Status, Compatible Feed & Realtime Chat
+      enterMainApp = async function () {
+        const { data: authData } = await supabaseClient.auth.getUser();
+        if (authData?.user) {
+          const { data: myProf } = await supabaseClient.from("profiles").select("*").eq("id", authData.user.id).maybeSingle();
+          if (!myProf || !myProf.onboarding_complete) {
+            $("authView").classList.add("hidden");
+            $("onboardingView").classList.remove("hidden");
+            return;
+          }
+          Object.assign(state.currentUser, myProf);
+          state.canRewind = !!myProf.can_rewind;
+          state.isMatched = !!myProf.is_matched;
+
+          // Load Outgoing Likes Sent by this User
+          const { data: sentRows } = await supabaseClient
+            .from("swipes")
+            .select("target_id, direction")
+            .eq("swiper_id", myProf.id)
+            .in("direction", ["right", "super"]);
+          if (sentRows && sentRows.length) {
+            const targetIds = sentRows.map((r) => r.target_id);
+            const { data: likedProfiles } = await supabaseClient.from("profiles").select("id, name, photos").in("id", targetIds);
+            state.sentLikes = (likedProfiles || []).map((lp) => {
+              const row = sentRows.find((r) => r.target_id === lp.id);
+              return { id: lp.id, name: lp.name, photo: lp.photos?.[0] || "", isSuper: row?.direction === "super" };
+            });
+          }
+
+          // Load 25M + 25F Launch Gate Counter
+          const { data: gate } = await supabaseClient.rpc("get_launch_gate_status");
+          if (gate) {
+            state.gateCounts.male = gate.male_count;
+            state.gateCounts.female = gate.female_count;
+            state.gateCounts.isUnlocked = gate.is_unlocked;
+          }
+
+          // Load Matched Partner or Compatible Feed
+          if (state.isMatched && myProf.matched_with) {
+            const { data: partner } = await supabaseClient.from("profiles").select("*").eq("id", myProf.matched_with).single();
+            state.matchedPartner = partner;
+            await loadLiveMessages(partner.id);
+          } else if (state.gateCounts.isUnlocked) {
+            const { data: feed } = await supabaseClient.rpc("get_compatible_feed");
+            state.deck = feed || [];
+          }
+
+          // Subscribe to Realtime Messages & Instant Match Lock
+          if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
+          realtimeChannel = supabaseClient
+            .channel("snu-live-room")
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `receiver_id=eq.${myProf.id}` }, (payload) => {
+              state.chatMessages.push({ from: "them", text: payload.new.body });
+              if ($("coupleChatView").classList.contains("hidden")) $("chatUnreadDot").classList.remove("hidden");
+              renderChat();
+            })
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${myProf.id}` }, async (payload) => {
+              if (payload.new.is_matched && !state.isMatched && payload.new.matched_with) {
+                const { data: partner } = await supabaseClient.from("profiles").select("*").eq("id", payload.new.matched_with).single();
+                if (partner) {
+                  await loadLiveMessages(partner.id);
+                  triggerMatch(partner);
+                }
+              } else if (!payload.new.is_matched && state.isMatched) {
+                resetMatchState();
+                const { data: feed } = await supabaseClient.rpc("get_compatible_feed");
+                state.deck = feed || [];
+                renderDeck();
+                showToast("Your match ended. Swiping is unlocked again.");
+              }
+            })
+            .subscribe();
+        }
+
+        $("authView").classList.add("hidden");
+        $("onboardingView").classList.add("hidden");
+        $("appView").classList.remove("hidden");
+
+        const u = state.currentUser;
+        $("myAvatarImg").src = u.photos?.[0] || "";
+        $("myProfileName").textContent = u.name + ", " + u.age;
+        $("myRollBadge").textContent = u.snu_roll_no ? "Roll No. " + u.snu_roll_no : (u.rollNo ? "Roll No. " + u.rollNo : "Verified Campus ID");
+
+        updateGateUI();
+        updateSentUI();
+        updateMatchPanel();
+        applyGateView();
+        setAppHeight();
+      };
+
+      async function loadLiveMessages(partnerId) {
+        const myId = state.currentUser.id;
+        const { data: msgs } = await supabaseClient
+          .from("messages")
+          .select("*")
+          .or(`and(sender_id.eq.${myId},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${myId})`)
+          .order("created_at", { ascending: true });
+        state.chatMessages = (msgs || []).map((m) => ({
+          from: m.sender_id === myId ? "me" : "them",
+          text: m.body
+        }));
+      }
+
+      // 3. Live Atomic Swipe Hook
+      const origCommitSwipe = commitSwipe;
+      commitSwipe = async function (dir, el) {
+        const p = el?._profile;
+        origCommitSwipe(dir, el);
+        if (p && !String(p.id).startsWith("snu-")) {
+          const { data: res } = await supabaseClient.rpc("perform_swipe", { target_uuid: p.id, swipe_dir: dir });
+          if (res?.match_found) {
+            await loadLiveMessages(p.id);
+            triggerMatch(p);
+          }
+        }
+      };
+
+      // 4. Live 1-Step Rewind Hook
+      const origRewind = handleRewind;
+      handleRewind = async function () {
+        if (state.lastSwipedProfile && !String(state.lastSwipedProfile.id).startsWith("snu-")) {
+          const { data: res } = await supabaseClient.rpc("perform_rewind");
+          if (!res?.ok) return showToast("Cannot rewind right now.");
+        }
+        origRewind();
+      };
+
+      // 5. Live Couple Chat Send Hook
+      const origSendChat = sendChatMessage;
+      sendChatMessage = async function (e) {
+        e.preventDefault();
+        if (state.matchedPartner && String(state.matchedPartner.id).startsWith("snu-")) {
+          return origSendChat(e);
+        }
+        const input = $("chatInput");
+        const text = input.value.trim();
+        if (!text || !state.isMatched || !state.matchedPartner) return;
+        state.chatMessages.push({ from: "me", text });
+        input.value = "";
+        renderChat();
+        input.focus({ preventScroll: true });
+        await supabaseClient.from("messages").insert({
+          sender_id: state.currentUser.id,
+          receiver_id: state.matchedPartner.id,
+          body: text
+        });
+      };
+
+      // 6. Live Unmatch Hook
+      const origUnmatch = unmatchPartner;
+      unmatchPartner = async function () {
+        if (state.matchedPartner && !String(state.matchedPartner.id).startsWith("snu-")) {
+          if (!window.confirm("Unmatch from " + state.matchedPartner.name + "? Your chat will be deleted.")) return;
+          await supabaseClient.rpc("unmatch_current_partner");
+          resetMatchState();
+          const { data: feed } = await supabaseClient.rpc("get_compatible_feed");
+          state.deck = feed || [];
+          renderDeck();
+          showToast("Unmatched. Swiping is live again.");
+          return;
+        }
+        origUnmatch();
+      };
+
+      // 7. Live Silent Report Hook (Fires Webhook to your Phone & hides user)
+      confirmSilentReport = async function (reason) {
+        const target = state.reportTarget;
+        closeReportModal();
+        if (!target) return;
+        if (!String(target.id).startsWith("snu-")) {
+          await supabaseClient.rpc("submit_silent_report", { target_uuid: target.id, report_reason: reason });
+        }
+        state.deck = state.deck.filter((c) => c.id !== target.id);
+        if (state.isMatched && state.matchedPartner && state.matchedPartner.id === target.id) {
+          if (!String(target.id).startsWith("snu-")) {
+            await supabaseClient.rpc("unmatch_current_partner");
+          }
+          resetMatchState();
+        }
+        renderDeck();
+        showToast("Profile reported anonymously. Thank you.");
+      };
+    }
+</script>
 </body>
 </html>
